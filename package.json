@@ -1,6 +1,6 @@
 {
   "name": "@kevinpatil/envguard",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "CLI tool that validates .env files against .env.example before your app ships",
   "main": "dist/index.js",
   "bin": {
