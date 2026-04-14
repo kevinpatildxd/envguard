@@ -22,7 +22,7 @@ program
     const example = parseEnvExample(examplePath);
 
     const results = validate(env, example);
-    report(results);
+    report(results, { json: options.json });
 
     const hasErrors = results.some((r) => r.severity === 'error');
     if (options.strict && hasErrors) {
