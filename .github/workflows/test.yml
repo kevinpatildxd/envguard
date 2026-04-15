@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
 
 jobs:
   test:
@@ -16,5 +16,5 @@ jobs:
           node-version: 18
           cache: npm
       - run: npm ci
-      - run: npx tsc --noEmit
+      - run: npm run build
       - run: npm test
