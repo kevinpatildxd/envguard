@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { emptyValue } from '../../src/rules/empty-value';
+import { emptyValue } from '../../src/modules/env/rules/empty-value';
 
 const example = new Map([['API_KEY', ''], ['PORT', '']]);
 
@@ -17,8 +17,7 @@ describe('emptyValue', () => {
     expect(emptyValue(env, example)).toHaveLength(0);
   });
 
-  it('does not flag keys missing from env (that is missing-key rule)', () => {
-    const env = new Map<string, string>();
-    expect(emptyValue(env, example)).toHaveLength(0);
+  it('does not flag keys missing from env', () => {
+    expect(emptyValue(new Map(), example)).toHaveLength(0);
   });
 });

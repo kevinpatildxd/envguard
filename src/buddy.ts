@@ -30,21 +30,22 @@ export function printBuddy(state: 'idle' | 'clear' | 'error', summary = ''): voi
     line1 = chalk.dim('v2.0.0');
   }
 
-  const dogLines = [
+  const dogRaw = [
     white('   / \\__'),
     white('  (') + eye + white('   ') + yellow('@\\___'),
     white('  /         ') + yellow('O'),
     white(' /   (_____/'),
     white('/_____/   U'),
   ];
-  const dogW = [8, 12, 13, 12, 11];
+  const DOG_WIDTH = Math.max(...dogRaw.map(vis)); // 13 — widest line sets the block width
+  const dogLines  = dogRaw.map((line) => line + ' '.repeat(DOG_WIDTH - vis(line)));
 
   const leftTexts  = [line0, line1, '', '', ''];
   const leftWidths = leftTexts.map(vis);
 
   console.log(chalk.dim('╭' + '─'.repeat(inner) + '╮'));
   for (let i = 0; i < 5; i++) {
-    const gap = inner - L - leftWidths[i] - dogW[i] - R;
+    const gap = inner - L - leftWidths[i] - DOG_WIDTH - R;
     console.log(
       chalk.dim('│') +
       ' '.repeat(L) +

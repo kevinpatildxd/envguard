@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { missingKey } from '../../src/rules/missing-key';
+import { missingKey } from '../../src/modules/env/rules/missing-key';
 
 const example = new Map([['DATABASE_URL', ''], ['JWT_SECRET', ''], ['PORT', '']]);
 
@@ -19,7 +19,6 @@ describe('missingKey', () => {
 
   it('marks results as error severity', () => {
     const env = new Map<string, string>();
-    const results = missingKey(env, example);
-    expect(results.every((r) => r.severity === 'error')).toBe(true);
+    expect(missingKey(env, example).every((r) => r.severity === 'error')).toBe(true);
   });
 });

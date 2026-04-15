@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { insecureDefaults } from '../../src/rules/insecure-defaults';
+import { insecureDefaults } from '../../src/modules/env/rules/insecure-defaults';
 
 const example = new Map<string, string>();
 

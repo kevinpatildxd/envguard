@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { ParsedEnv } from './types';
+import { ParsedEnv } from '../../types';
 
 function parseLines(content: string): ParsedEnv {
   const map: ParsedEnv = new Map();
@@ -7,7 +7,6 @@ function parseLines(content: string): ParsedEnv {
   for (const rawLine of content.split('\n')) {
     const line = rawLine.trim();
 
-    // skip blank lines and comments
     if (!line || line.startsWith('#')) continue;
 
     const eqIndex = line.indexOf('=');
@@ -18,13 +17,11 @@ function parseLines(content: string): ParsedEnv {
 
     let value = line.slice(eqIndex + 1).trim();
 
-    // strip inline comments (e.g. KEY=value # comment)
     const commentIndex = value.indexOf(' #');
     if (commentIndex !== -1) {
       value = value.slice(0, commentIndex).trim();
     }
 
-    // strip surrounding quotes
     if (
       (value.startsWith('"') && value.endsWith('"')) ||
       (value.startsWith("'") && value.endsWith("'"))
@@ -42,14 +39,12 @@ export function parseEnvFile(filePath: string): ParsedEnv {
   if (!fs.existsSync(filePath)) {
     throw new Error(`File not found: ${filePath}`);
   }
-  const content = fs.readFileSync(filePath, 'utf-8');
-  return parseLines(content);
+  return parseLines(fs.readFileSync(filePath, 'utf-8'));
 }
 
 export function parseEnvExample(filePath: string): ParsedEnv {
   if (!fs.existsSync(filePath)) {
     throw new Error(`File not found: ${filePath}`);
   }
-  const content = fs.readFileSync(filePath, 'utf-8');
-  return parseLines(content);
+  return parseLines(fs.readFileSync(filePath, 'utf-8'));
 }

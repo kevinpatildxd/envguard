@@ -1,4 +1,5 @@
 import { Command } from 'commander';
+import { runEnv } from './modules/env';
 
 export const program = new Command();
 
@@ -15,8 +16,14 @@ program
   .option('--strict', 'exit with code 1 if any errors are found')
   .option('--json', 'output results as JSON')
   .option('--init', 'generate .env.example from your .env file')
-  .action(() => {
-    console.log('env module — coming in Phase 2');
+  .action((opts) => {
+    runEnv({
+      file:    opts.file,
+      example: opts.example,
+      strict:  !!opts.strict,
+      json:    !!opts.json,
+      init:    !!opts.init,
+    });
   });
 
 program

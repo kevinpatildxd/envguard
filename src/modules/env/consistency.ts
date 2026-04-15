@@ -1,4 +1,4 @@
-import { ParsedEnv } from './types';
+import { ParsedEnv } from '../../types';
 
 export interface ConsistencyIssue {
   key: string;
@@ -11,7 +11,6 @@ export function checkConsistency(
 ): ConsistencyIssue[] {
   if (envFiles.length < 2) return [];
 
-  // collect all unique keys across all files
   const allKeys = new Set<string>();
   for (const { env } of envFiles) {
     for (const key of env.keys()) allKeys.add(key);
@@ -20,9 +19,8 @@ export function checkConsistency(
   const issues: ConsistencyIssue[] = [];
 
   for (const key of allKeys) {
-    const presentIn = envFiles.filter(({ env }) => env.has(key)).map(({ file }) => file);
+    const presentIn = envFiles.filter(({ env }) =>  env.has(key)).map(({ file }) => file);
     const missingIn = envFiles.filter(({ env }) => !env.has(key)).map(({ file }) => file);
-
     if (missingIn.length > 0 && presentIn.length > 0) {
       issues.push({ key, presentIn, missingIn });
     }
