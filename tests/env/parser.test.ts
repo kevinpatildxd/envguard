@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import path from 'path';
-import { parseEnvFile, parseEnvExample } from '../src/parser';
+import { parseEnvFile, parseEnvExample } from '../../src/modules/env/parser';
 
-const fixture = (name: string) => path.resolve(__dirname, 'fixtures', name);
+const fixture = (name: string) => path.resolve(__dirname, '../fixtures', name);
 
 describe('parseEnvFile', () => {
   it('parses all key-value pairs from a complete .env', () => {

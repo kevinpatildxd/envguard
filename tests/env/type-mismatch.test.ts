@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { typeMismatch } from '../../src/rules/type-mismatch';
+import { typeMismatch } from '../../src/modules/env/rules/type-mismatch';
 
 const example = new Map<string, string>();
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { malformedUrl } from '../../src/rules/malformed-url';
+import { malformedUrl } from '../../src/modules/env/rules/malformed-url';
 
 const example = new Map<string, string>();
 

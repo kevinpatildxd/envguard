@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { weakSecret } from '../../src/rules/weak-secret';
+import { weakSecret } from '../../src/modules/env/rules/weak-secret';
 
 const example = new Map<string, string>();
 
@@ -12,7 +12,6 @@ describe('weakSecret', () => {
   });
 
   it('flags secrets with low entropy even if long enough', () => {
-    // repeating pattern — long but low entropy
     const env = new Map([['JWT_SECRET', 'aaaaaaaaaaaaaaaaaaa']]);
     const results = weakSecret(env, example);
     expect(results).toHaveLength(1);
@@ -30,7 +29,6 @@ describe('weakSecret', () => {
   });
 
   it('does not flag empty values', () => {
-    const env = new Map([['JWT_SECRET', '']]);
-    expect(weakSecret(env, example)).toHaveLength(0);
+    expect(weakSecret(new Map([['JWT_SECRET', '']]), example)).toHaveLength(0);
   });
 });

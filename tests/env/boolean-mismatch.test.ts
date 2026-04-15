@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { booleanMismatch } from '../../src/rules/boolean-mismatch';
+import { booleanMismatch } from '../../src/modules/env/rules/boolean-mismatch';
 
 const example = new Map<string, string>();
 
@@ -13,10 +13,8 @@ describe('booleanMismatch', () => {
 
   it('accepts true, false, 1, 0 as valid', () => {
     const env = new Map([
-      ['FEATURE_FLAG', 'true'],
-      ['ENABLE_CACHE', 'false'],
-      ['IS_PROD', '1'],
-      ['USE_SSL', '0'],
+      ['FEATURE_FLAG', 'true'], ['ENABLE_CACHE', 'false'],
+      ['IS_PROD', '1'],         ['USE_SSL', '0'],
     ]);
     expect(booleanMismatch(env, example)).toHaveLength(0);
   });

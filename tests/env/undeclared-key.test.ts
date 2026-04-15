@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { undeclaredKey } from '../../src/rules/undeclared-key';
+import { undeclaredKey } from '../../src/modules/env/rules/undeclared-key';
 
 const example = new Map([['PORT', ''], ['DATABASE_URL', '']]);
 
