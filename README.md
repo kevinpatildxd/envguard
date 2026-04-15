@@ -3,33 +3,26 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/kevinpatildxd/devguard/actions/workflows/test.yml/badge.svg)](https://github.com/kevinpatildxd/devguard/actions/workflows/test.yml)
 [![npm version](https://img.shields.io/npm/v/%40kevinpatil%2Fdevguard.svg)](https://www.npmjs.com/package/@kevinpatil/devguard)
-[![npm downloads](https://img.shields.io/npm/dm/%40kevinpatil%2Fdevguard.svg)](https://www.npmjs.com/package/@kevinpatil/devguard)
+[![npm downloads](https://img.shields.io/npm/dm/%40kevinpatil%2Fdevguard.svg)](https://www.npmjs.com/package/@kevinpatild/devguard)
 
-Validate your `.env` files against `.env.example` before your app ships.
+One command to guard your project before it ships.
 
-Catches missing keys, insecure defaults, type mismatches, weak secrets, low-entropy secrets, cross-environment inconsistencies, and more — in a single fast command.
+Validates env files, audits dependencies, and checks React code quality — all in one fast CLI. No config files. No API keys. Works offline, in Docker, everywhere.
 
-```
-$ npx @kevinpatil/devguard
+---
 
-devguard — found 2 env file(s)
+## What it checks
 
-── .env ────────────────────────────────────
-  ERRORS (2)
-    ✗ DATABASE_URL — Missing required key (defined in .env.example)
-    ✗ JWT_SECRET — Insecure placeholder value: 'secret'
-  WARNINGS (2)
-    ⚠ PORT — Expected a number but got 'abc'
-    ⚠ STRIPE_KEY — Key is not declared in .env.example
+| Module | Command | What it catches |
+|---|---|---|
+| **env** | `devguard env` | Missing keys, insecure defaults, type mismatches, weak secrets, cross-env inconsistencies |
+| **deps** | `devguard deps` | Unused packages, outdated versions, vulnerabilities (OSV.dev), bloated alternatives |
+| **react** | `devguard react` | Dead imports, re-render risks, hook violations, bundle size, accessibility, RSC boundaries |
 
-── .env.staging ────────────────────────────
-  ✔ All checks passed
+Run all checks at once:
 
-── Cross-environment consistency ──────────
-  ⚡ REDIS_URL — present in [.env] but missing in [.env.staging]
-
-✗ 2 error(s) across 2 file(s)
-⚡ 1 cross-env inconsistency issue(s)
+```bash
+npx @kevinpatil/devguard
 ```
 
 ---
@@ -51,63 +44,135 @@ npx @kevinpatil/devguard
 ## Usage
 
 ```bash
-# Auto-scan all .env files and validate against .env.example
+# Run all checks (env + deps + react if React project detected)
 npx @kevinpatil/devguard
 
-# Generate .env.example from your existing .env (values blanked)
-npx @kevinpatil/devguard --init
+# Env validation only
+npx @kevinpatil/devguard env
 
-# Target a specific env file only
-npx @kevinpatil/devguard --env .env.staging
+# Dependency audit only
+npx @kevinpatil/devguard deps
 
-# Use a custom example file
-npx @kevinpatil/devguard --example .env.example.production
+# React code quality only
+npx @kevinpatil/devguard react
 
-# Exit with code 1 if any errors are found (for CI)
-npx @kevinpatil/devguard --strict
-
-# Output results as JSON
+# Output results as JSON (any command)
 npx @kevinpatil/devguard --json
+npx @kevinpatil/devguard env --json
+npx @kevinpatil/devguard deps --json
+
+# Exit with code 1 if any errors found (for CI)
+npx @kevinpatil/devguard --strict
+npx @kevinpatil/devguard env --strict
 ```
 
 ---
 
-## Validation Rules
+## env module
+
+Validates your `.env` files against `.env.example` before your app ships.
+
+```bash
+npx @kevinpatil/devguard env
+
+devguard — found 2 env file(s)
+
+── .env ────────────────────────────────────
+  ERRORS (2)
+    ✗ DATABASE_URL — Missing required key (defined in .env.example)
+    ✗ JWT_SECRET — Insecure placeholder value: 'secret'
+  WARNINGS (2)
+    ⚠ PORT — Expected a number but got 'abc'
+    ⚠ STRIPE_KEY — Key is not declared in .env.example
+
+── .env.staging ────────────────────────────
+  ✔ All checks passed
+
+── Cross-environment consistency ──────────
+  ⚡ REDIS_URL — present in [.env] but missing in [.env.staging]
+
+✗ 2 error(s) across 2 file(s)
+⚡ 1 cross-env inconsistency issue(s)
+```
+
+### env rules
 
 | Rule | Severity | Description |
 |---|---|---|
-| `missing-key` | ERROR | Key defined in `.env.example` is absent from `.env` |
-| `empty-value` | ERROR | Key is present but has no value |
+| `missing-key` | ERROR | Key in `.env.example` is absent from `.env` |
+| `empty-value` | ERROR | Key present but has no value |
 | `insecure-defaults` | ERROR | Value matches a known insecure placeholder (`changeme`, `secret`, `todo`…) |
-| `undeclared-key` | WARNING | Key exists in `.env` but is not in `.env.example` |
-| `weak-secret` | WARNING | Secret key is too short (under 16 chars) or has low entropy |
+| `undeclared-key` | WARNING | Key in `.env` but not in `.env.example` |
+| `weak-secret` | WARNING | Secret key is too short or has low entropy |
 | `type-mismatch` | WARNING | Numeric key (`PORT`, `TIMEOUT`…) has a non-numeric value |
-| `malformed-url` | WARNING | URL key has a value with a missing or unrecognized protocol |
+| `malformed-url` | WARNING | URL key has a missing or unrecognized protocol |
 | `boolean-mismatch` | WARNING | Boolean key (`FEATURE_*`, `ENABLE_*`…) has a non-boolean value |
 
----
-
-## Cross-Environment Consistency
-
-When multiple `.env` files are present, envguard automatically checks that all keys are consistent across environments:
-
-```
-⚡ REDIS_URL — present in [.env, .env.production] but missing in [.env.staging]
-```
-
-This catches cases where a new key is added to one env file but forgotten in others.
-
----
-
-## Getting Started (existing project)
-
-If your project doesn't have a `.env.example` yet:
+### Getting started (no `.env.example` yet)
 
 ```bash
-npx @kevinpatil/devguard --init
+npx @kevinpatil/devguard env --init
 ```
 
-This generates `.env.example` from your existing `.env` with all values blanked. Commit it to your repo so teammates know what keys are required.
+Generates `.env.example` from your existing `.env` with all values blanked. Commit it so teammates know what keys are required.
+
+---
+
+## deps module
+
+Audits your project dependencies for issues that slow you down or put you at risk.
+
+```bash
+npx @kevinpatil/devguard deps
+
+── DEPS AUDIT ──────────────────────────────
+  UNUSED (2)
+    ✗ moment — imported nowhere in your source
+    ✗ lodash — imported nowhere in your source
+  OUTDATED (1)
+    ⚠ axios — 0.27.0 → 1.7.2
+  VULNERABILITIES (1)
+    ✗ express@4.18.0 — CVE-2024-29041  High
+  ALTERNATIVES (1)
+    ⚠ moment — 67KB, consider date-fns (13KB) or dayjs (2KB)
+```
+
+---
+
+## react module
+
+Audits React code quality across imports, performance patterns, hooks, bundle size, accessibility, and server component boundaries.
+
+```bash
+npx @kevinpatil/devguard react
+
+── REACT AUDIT ─────────────────────────────
+  IMPORTS
+    ✗ src/components/OldModal.tsx — imported nowhere
+    ⚠ src/utils/helpers.ts — formatDate imported but never used
+  RERENDERS
+    ⚠ src/pages/Home.tsx:42 — inline object in JSX prop causes re-renders
+    ⚠ src/pages/Home.tsx:58 — inline arrow function in onClick prop
+  HOOKS
+    ✗ src/components/Form.tsx:31 — hook called inside if block
+  BUNDLE
+    ⚠ moment — 67KB, consider date-fns or dayjs
+  A11Y
+    ✗ src/components/Avatar.tsx:12 — <img> missing alt attribute
+  SERVER
+    ✗ src/app/Dashboard.tsx — server component uses useState (client-only hook)
+```
+
+### react subcommands
+
+```bash
+npx @kevinpatil/devguard react:imports     # dead components and unused imports
+npx @kevinpatil/devguard react:rerenders   # re-render risk patterns
+npx @kevinpatil/devguard react:hooks       # hooks rules violations
+npx @kevinpatil/devguard react:bundle      # bundle size analysis
+npx @kevinpatil/devguard react:a11y        # accessibility checks
+npx @kevinpatil/devguard react:server      # RSC boundary violations
+```
 
 ---
 
@@ -116,34 +181,21 @@ This generates `.env.example` from your existing `.env` with all values blanked.
 ### GitHub Actions
 
 ```yaml
-- name: Validate environment variables
+- name: Run devguard
   run: npx @kevinpatil/devguard --strict
 ```
 
 ### Any CI
 
 ```bash
-npx @kevinpatil/devguard --strict  # exits with code 1 if errors are found
+npx @kevinpatil/devguard --strict   # exits with code 1 if any errors found
 ```
 
 ### JSON output for custom pipelines
 
 ```bash
-npx @kevinpatil/devguard --json | jq '.files[].results[] | select(.severity == "error")'
+npx @kevinpatil/devguard --json | jq '.files[].issues[] | select(.severity == "error")'
 ```
-
----
-
-## How it works
-
-1. Reads `.env.example` as the source of truth
-2. Auto-detects all `.env*` files in the current directory
-3. Runs all validation rules against each file
-4. Checks cross-environment key consistency across all files
-5. Prints a color-coded report per file with an overall summary
-6. In `--strict` mode, exits with code `1` if any errors are found
-
-No config files required. No API keys. Works offline, in Docker, everywhere.
 
 ---
 
