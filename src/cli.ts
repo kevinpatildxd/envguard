@@ -1,5 +1,6 @@
 import { Command } from 'commander';
-import { runEnv } from './modules/env';
+import { runEnv }  from './modules/env';
+import { runDeps } from './modules/deps';
 
 export const program = new Command();
 
@@ -30,8 +31,8 @@ program
   .command('deps')
   .description('Audit dependencies for unused packages, outdated versions, and vulnerabilities')
   .option('--json', 'output results as JSON')
-  .action(() => {
-    console.log('deps module — coming in Phase 3');
+  .action((opts) => {
+    runDeps({ json: !!opts.json });
   });
 
 program
