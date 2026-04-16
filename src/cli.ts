@@ -1,8 +1,9 @@
 import fs          from 'fs';
 import path        from 'path';
 import { Command } from 'commander';
-import { runEnv }  from './modules/env';
-import { runDeps } from './modules/deps';
+import { runEnv }          from './modules/env';
+import { runDeps }         from './modules/deps';
+import { runReactImports } from './modules/react/imports';
 import { printBuddy }   from './buddy';
 import { printSummary } from './reporter';
 
@@ -80,10 +81,19 @@ program
   });
 
 program
+  .command('react:imports')
+  .description('Find unused imports and dead files across your React codebase')
+  .option('--entry <file>', 'entry point file (e.g. src/main.tsx)')
+  .option('--json', 'output results as JSON')
+  .action((opts) => {
+    runReactImports({ entry: opts.entry, json: !!opts.json });
+  });
+
+program
   .command('react')
   .description('Audit React code quality — imports, rerenders, hooks, bundle, a11y, server components')
   .option('--entry <file>', 'entry point file (e.g. src/main.tsx)')
   .option('--json', 'output results as JSON')
-  .action(() => {
-    console.log('react module — coming in Phase 5');
+  .action((opts) => {
+    runReactImports({ entry: opts.entry, json: !!opts.json });
   });
