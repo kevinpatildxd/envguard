@@ -93,7 +93,7 @@ function checkMissingMemo(ast: ReturnType<typeof tryParseSource>, rel: string): 
   const issues: ReactIssue[] = [];
 
   for (const node of ast.program.body) {
-    const n = node as Record<string, unknown>;
+    const n = node as unknown as Record<string, unknown>;
 
     // export function ComponentName(...) { ... }
     if (n['type'] === 'ExportNamedDeclaration') {
