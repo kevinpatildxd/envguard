@@ -6,6 +6,7 @@ import { runDeps }         from './modules/deps';
 import { runReactImports }   from './modules/react/imports';
 import { runReactRerenders } from './modules/react/rerenders';
 import { runReactHooks }     from './modules/react/hooks';
+import { runReactBundle }    from './modules/react/bundle';
 import { printBuddy }   from './buddy';
 import { printSummary } from './reporter';
 
@@ -108,12 +109,22 @@ program
   });
 
 program
+  .command('react:bundle')
+  .description('Warn about heavy npm packages that inflate your bundle')
+  .option('--json', 'output results as JSON')
+  .option('--threshold <kb>', 'warn threshold in kB gzipped (default: 50)', '50')
+  .action(async (opts) => {
+    await runReactBundle({ json: !!opts.json, threshold: Number(opts.threshold) });
+  });
+
+program
   .command('react')
-  .description('Run all React checks — imports, rerenders, hooks')
+  .description('Run all React checks — imports, rerenders, hooks, bundle')
   .option('--entry <file>', 'entry point file (e.g. src/main.tsx)')
   .option('--json', 'output results as JSON')
-  .action((opts) => {
+  .action(async (opts) => {
     runReactImports({ entry: opts.entry, json: !!opts.json });
     runReactRerenders({ json: !!opts.json });
     runReactHooks({ json: !!opts.json });
+    await runReactBundle({ json: !!opts.json });
   });
