@@ -7,6 +7,8 @@ import { runReactImports }   from './modules/react/imports';
 import { runReactRerenders } from './modules/react/rerenders';
 import { runReactHooks }     from './modules/react/hooks';
 import { runReactBundle }    from './modules/react/bundle';
+import { runReactA11y }      from './modules/react/a11y';
+import { runReactServer }    from './modules/react/server';
 import { printBuddy }   from './buddy';
 import { printSummary } from './reporter';
 
@@ -118,8 +120,24 @@ program
   });
 
 program
+  .command('react:a11y')
+  .description('Scan JSX for accessibility violations — img, button, input, anchor checks')
+  .option('--json', 'output results as JSON')
+  .action((opts) => {
+    runReactA11y({ json: !!opts.json });
+  });
+
+program
+  .command('react:server')
+  .description('Check React Server Component boundaries — client hooks in server, server modules in client')
+  .option('--json', 'output results as JSON')
+  .action((opts) => {
+    runReactServer({ json: !!opts.json });
+  });
+
+program
   .command('react')
-  .description('Run all React checks — imports, rerenders, hooks, bundle')
+  .description('Run all React checks — imports, rerenders, hooks, bundle, a11y, server')
   .option('--entry <file>', 'entry point file (e.g. src/main.tsx)')
   .option('--json', 'output results as JSON')
   .action(async (opts) => {
@@ -127,4 +145,6 @@ program
     runReactRerenders({ json: !!opts.json });
     runReactHooks({ json: !!opts.json });
     await runReactBundle({ json: !!opts.json });
+    runReactA11y({ json: !!opts.json });
+    runReactServer({ json: !!opts.json });
   });
