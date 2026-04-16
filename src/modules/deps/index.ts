@@ -7,10 +7,16 @@ import { printBuddy }               from '../../buddy';
 import { DepsIssue }                from '../../types';
 
 export interface DepsRunOptions {
-  json:   boolean;
+  json:            boolean;
+  suppressSummary?: boolean;
 }
 
-export async function runDeps(options: DepsRunOptions): Promise<void> {
+export interface DepsCounts {
+  errors:   number;
+  warnings: number;
+}
+
+export async function runDeps(options: DepsRunOptions): Promise<DepsCounts> {
   const cwd = process.cwd();
 
   // run all checks — unused is sync, outdated + vulns are async (parallel)
@@ -40,15 +46,15 @@ export async function runDeps(options: DepsRunOptions): Promise<void> {
 
   const allIssues = [...unused, ...outdated, ...vulns, ...alternatives];
 
+  const errors   = allIssues.filter((i) => i.severity === 'error');
+  const warnings = allIssues.filter((i) => i.severity === 'warning');
+
   if (options.json) {
     console.log(JSON.stringify(allIssues, null, 2));
-    return;
+    return { errors: errors.length, warnings: warnings.length };
   }
 
   printHeader('DEPS AUDIT');
-
-  const errors   = allIssues.filter((i) => i.severity === 'error');
-  const warnings = allIssues.filter((i) => i.severity === 'warning');
 
   if (unused.length > 0) {
     console.log('\n  Unused');
@@ -74,11 +80,14 @@ export async function runDeps(options: DepsRunOptions): Promise<void> {
     console.log('\n  ✔ All dependency checks passed');
   }
 
-  printSummary(errors.length, warnings.length, 0);
+  if (!options.suppressSummary) {
+    printSummary(errors.length, warnings.length, 0);
+    const hasErrors = errors.length > 0;
+    printBuddy(
+      hasErrors ? 'error' : 'clear',
+      hasErrors ? `${errors.length} dep error(s) — fix before deploy.` : ''
+    );
+  }
 
-  const hasErrors = errors.length > 0;
-  printBuddy(
-    hasErrors ? 'error' : warnings.length > 0 ? 'error' : 'clear',
-    hasErrors ? `${errors.length} dep error(s) — fix before deploy.` : ''
-  );
+  return { errors: errors.length, warnings: warnings.length };
 }

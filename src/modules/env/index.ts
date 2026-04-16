@@ -49,14 +49,21 @@ export function validate(env: ReturnType<typeof parseEnvFile>, example: ReturnTy
 }
 
 export interface EnvRunOptions {
-  file?:    string;
-  example:  string;
-  strict:   boolean;
-  json:     boolean;
-  init:     boolean;
+  file?:           string;
+  example:         string;
+  strict:          boolean;
+  json:            boolean;
+  init:            boolean;
+  suppressSummary?: boolean;
 }
 
-export function runEnv(options: EnvRunOptions): void {
+export interface EnvCounts {
+  errors:   number;
+  warnings: number;
+  passed:   number;
+}
+
+export function runEnv(options: EnvRunOptions): EnvCounts {
   const cwd         = process.cwd();
   const examplePath = path.resolve(cwd, options.example);
 
@@ -73,7 +80,7 @@ export function runEnv(options: EnvRunOptions): void {
     }
     generateExample(sourcePath, examplePath);
     console.log(`✔ Generated ${options.example} from ${options.file ?? '.env'} (all values blanked)`);
-    return;
+    return { errors: 0, warnings: 0, passed: 0 };
   }
 
   if (!fs.existsSync(examplePath)) {
@@ -94,26 +101,29 @@ export function runEnv(options: EnvRunOptions): void {
     const env     = parseEnvFile(envPath);
     const results = validate(env, example);
 
-    if (options.json) {
-      console.log(JSON.stringify(results, null, 2));
-      return;
-    }
-
-    printHeader('ENV AUDIT');
-    console.log();
     const errors         = results.filter((r) => r.severity === 'error');
     const warnings       = results.filter((r) => r.severity === 'warning');
     const keysWithIssues = new Set(results.map((r) => r.key));
     const passed         = [...example.keys()].filter((k) => env.has(k) && !keysWithIssues.has(k)).length;
+
+    if (options.json) {
+      console.log(JSON.stringify(results, null, 2));
+      return { errors: errors.length, warnings: warnings.length, passed };
+    }
+
+    printHeader('ENV AUDIT');
+    console.log();
     for (const r of errors)   printError(r.key, r.message);
     for (const r of warnings) printWarning(r.key, r.message);
     printPassed(passed);
-    printSummary(errors.length, warnings.length, passed);
 
-    const hasErrors = errors.length > 0;
-    printBuddy(hasErrors ? 'error' : 'clear', hasErrors ? `${errors.length} error(s) — fix before deploy.` : '');
-    if (options.strict && hasErrors) process.exit(1);
-    return;
+    if (!options.suppressSummary) {
+      printSummary(errors.length, warnings.length, passed);
+      printBuddy(errors.length > 0 ? 'error' : 'clear', errors.length > 0 ? `${errors.length} error(s) — fix before deploy.` : '');
+    }
+
+    if (options.strict && errors.length > 0) process.exit(1);
+    return { errors: errors.length, warnings: warnings.length, passed };
   }
 
   // auto-scan mode
@@ -134,17 +144,17 @@ export function runEnv(options: EnvRunOptions): void {
 
   const consistency = checkConsistency(allResults.map(({ file, env }) => ({ file, env })));
 
+  let totalErrors = 0, totalWarnings = 0, totalPassed = 0;
+
   if (options.json) {
     console.log(JSON.stringify({
       files: allResults.map(({ file, results }) => ({ file, results })),
       consistency,
     }, null, 2));
-    return;
+    return { errors: totalErrors, warnings: totalWarnings, passed: totalPassed };
   }
 
   printHeader('ENV AUDIT');
-
-  let totalErrors = 0, totalWarnings = 0, totalPassed = 0;
 
   for (const { file, results, env } of allResults) {
     const errors         = results.filter((r) => r.severity === 'error');
@@ -172,9 +182,11 @@ export function runEnv(options: EnvRunOptions): void {
     }
   }
 
-  printSummary(totalErrors, totalWarnings, totalPassed);
+  if (!options.suppressSummary) {
+    printSummary(totalErrors, totalWarnings, totalPassed);
+    printBuddy(totalErrors > 0 ? 'error' : 'clear', totalErrors > 0 ? `${totalErrors} error(s) — fix before deploy.` : '');
+  }
 
-  const hasErrors = totalErrors > 0;
-  printBuddy(hasErrors ? 'error' : 'clear', hasErrors ? `${totalErrors} error(s) — fix before deploy.` : '');
-  if (options.strict && hasErrors) process.exit(1);
+  if (options.strict && totalErrors > 0) process.exit(1);
+  return { errors: totalErrors, warnings: totalWarnings, passed: totalPassed };
 }
