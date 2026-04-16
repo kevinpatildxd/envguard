@@ -166,10 +166,11 @@ function scanChildren(
 
 export interface ReactHooksOptions {
   json: boolean;
+  cwd?: string;
 }
 
 export function runReactHooks(options: ReactHooksOptions): void {
-  const cwd    = process.cwd();
+  const cwd    = options.cwd ?? process.cwd();
   const srcDir = fs.existsSync(path.join(cwd, 'src')) ? path.join(cwd, 'src') : cwd;
   const files  = walkFiles(srcDir, ['.tsx', '.jsx', '.ts', '.js']);
   const issues: ReactIssue[] = [];

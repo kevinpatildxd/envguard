@@ -1,20 +1,17 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import path from 'path';
-import { vi } from 'vitest';
 import { runReactHooks } from '../../src/modules/react/hooks';
 
 const VIOLATIONS_DIR = path.resolve(__dirname, 'fixtures/hooks');
 
 function collectIssues(fixtureDir: string) {
-  const spy    = vi.spyOn(console, 'log').mockImplementation(() => {});
-  const cwdSpy = vi.spyOn(process, 'cwd').mockReturnValue(fixtureDir);
+  const spy = vi.spyOn(console, 'log').mockImplementation(() => {});
   try {
-    runReactHooks({ json: true });
+    runReactHooks({ json: true, cwd: fixtureDir });
     const output = spy.mock.calls.map((c) => c[0]).join('');
     return JSON.parse(output) as { type: string; file: string; line: number; message: string }[];
   } finally {
     spy.mockRestore();
-    cwdSpy.mockRestore();
   }
 }
 
@@ -39,7 +36,7 @@ describe('runReactHooks', () => {
     expect(issues.some((i) => i.type === 'hook-in-regular-function')).toBe(true);
   });
 
-  it('reports violations from Violations.tsx', () => {
+  it('violations only come from Violations.tsx', () => {
     const issues = collectIssues(VIOLATIONS_DIR);
     expect(issues.every((i) => i.file.includes('Violations'))).toBe(true);
   });
@@ -51,8 +48,7 @@ describe('runReactHooks', () => {
 
   it('does not flag hooks in a custom hook function', () => {
     const issues = collectIssues(VIOLATIONS_DIR);
-    const cleanIssues = issues.filter((i) => i.file.includes('Clean'));
-    expect(cleanIssues).toHaveLength(0);
+    expect(issues.filter((i) => i.file.includes('Clean'))).toHaveLength(0);
   });
 
   it('reports the correct line number for violations', () => {

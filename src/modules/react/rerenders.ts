@@ -237,10 +237,11 @@ function hookCallName(callee: Record<string, unknown>): string | null {
 
 export interface ReactRerendersOptions {
   json: boolean;
+  cwd?: string;
 }
 
 export function runReactRerenders(options: ReactRerendersOptions): void {
-  const cwd      = process.cwd();
+  const cwd      = options.cwd ?? process.cwd();
   const srcDir   = fs.existsSync(path.join(cwd, 'src')) ? path.join(cwd, 'src') : cwd;
   const files    = walkFiles(srcDir, ['.tsx', '.jsx']);
   const issues: ReactIssue[] = [];
