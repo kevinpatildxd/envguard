@@ -49,12 +49,13 @@ export function validate(env: ReturnType<typeof parseEnvFile>, example: ReturnTy
 }
 
 export interface EnvRunOptions {
-  file?:           string;
-  example:         string;
-  strict:          boolean;
-  json:            boolean;
-  init:            boolean;
+  file?:            string;
+  example:          string;
+  strict:           boolean;
+  json:             boolean;
+  init:             boolean;
   suppressSummary?: boolean;
+  silent?:          boolean;
 }
 
 export interface EnvCounts {
@@ -111,15 +112,17 @@ export function runEnv(options: EnvRunOptions): EnvCounts {
       return { errors: errors.length, warnings: warnings.length, passed };
     }
 
-    printHeader('ENV AUDIT');
-    console.log();
-    for (const r of errors)   printError(r.key, r.message);
-    for (const r of warnings) printWarning(r.key, r.message);
-    printPassed(passed);
+    if (!options.silent) {
+      printHeader('ENV AUDIT');
+      console.log();
+      for (const r of errors)   printError(r.key, r.message);
+      for (const r of warnings) printWarning(r.key, r.message);
+      printPassed(passed);
 
-    if (!options.suppressSummary) {
-      printSummary(errors.length, warnings.length, passed);
-      printBuddy(errors.length > 0 ? 'error' : 'clear', errors.length > 0 ? `${errors.length} error(s) — fix before deploy.` : '');
+      if (!options.suppressSummary) {
+        printSummary(errors.length, warnings.length, passed);
+        printBuddy(errors.length > 0 ? 'error' : 'clear', errors.length > 0 ? `${errors.length} error(s) — fix before deploy.` : '');
+      }
     }
 
     if (options.strict && errors.length > 0) process.exit(1);
@@ -154,7 +157,9 @@ export function runEnv(options: EnvRunOptions): EnvCounts {
     return { errors: totalErrors, warnings: totalWarnings, passed: totalPassed };
   }
 
-  printHeader('ENV AUDIT');
+  if (!options.silent) {
+    printHeader('ENV AUDIT');
+  }
 
   for (const { file, results, env } of allResults) {
     const errors         = results.filter((r) => r.severity === 'error');
@@ -162,12 +167,14 @@ export function runEnv(options: EnvRunOptions): EnvCounts {
     const keysWithIssues = new Set(results.map((r) => r.key));
     const passed         = [...example.keys()].filter((k) => env.has(k) && !keysWithIssues.has(k)).length;
 
-    console.log(`\n  ${file}`);
-    if (errors.length === 0 && warnings.length === 0) {
-      console.log(`  ✔ All checks passed`);
-    } else {
-      for (const r of errors)   printError(r.key, r.message);
-      for (const r of warnings) printWarning(r.key, r.message);
+    if (!options.silent) {
+      console.log(`\n  ${file}`);
+      if (errors.length === 0 && warnings.length === 0) {
+        console.log(`  ✔ All checks passed`);
+      } else {
+        for (const r of errors)   printError(r.key, r.message);
+        for (const r of warnings) printWarning(r.key, r.message);
+      }
     }
 
     totalErrors   += errors.length;
@@ -175,14 +182,14 @@ export function runEnv(options: EnvRunOptions): EnvCounts {
     totalPassed   += passed;
   }
 
-  if (consistency.length > 0) {
+  if (!options.silent && consistency.length > 0) {
     console.log('\n  ⚡ Cross-environment');
     for (const issue of consistency) {
       console.log(`    ${issue.key} — present in [${issue.presentIn.join(', ')}] but missing in [${issue.missingIn.join(', ')}]`);
     }
   }
 
-  if (!options.suppressSummary) {
+  if (!options.silent && !options.suppressSummary) {
     printSummary(totalErrors, totalWarnings, totalPassed);
     printBuddy(totalErrors > 0 ? 'error' : 'clear', totalErrors > 0 ? `${totalErrors} error(s) — fix before deploy.` : '');
   }
