@@ -7,8 +7,9 @@ import { printBuddy }               from '../../buddy';
 import { DepsIssue }                from '../../types';
 
 export interface DepsRunOptions {
-  json:            boolean;
+  json:             boolean;
   suppressSummary?: boolean;
+  silent?:          boolean;
 }
 
 export interface DepsCounts {
@@ -54,39 +55,41 @@ export async function runDeps(options: DepsRunOptions): Promise<DepsCounts> {
     return { errors: errors.length, warnings: warnings.length };
   }
 
-  printHeader('DEPS AUDIT');
+  if (!options.silent) {
+    printHeader('DEPS AUDIT');
 
-  if (unused.length > 0) {
-    console.log('\n  Unused');
-    for (const i of unused) printError(i.name, i.message);
-  }
+    if (unused.length > 0) {
+      console.log('\n  Unused');
+      for (const i of unused) printError(i.name, i.message);
+    }
 
-  if (outdated.length > 0) {
-    console.log('\n  Outdated');
-    for (const i of outdated) printWarning(i.name, i.message);
-  }
+    if (outdated.length > 0) {
+      console.log('\n  Outdated');
+      for (const i of outdated) printWarning(i.name, i.message);
+    }
 
-  if (vulns.length > 0) {
-    console.log('\n  Vulnerabilities');
-    for (const i of vulns) printError(i.name, i.message);
-  }
+    if (vulns.length > 0) {
+      console.log('\n  Vulnerabilities');
+      for (const i of vulns) printError(i.name, i.message);
+    }
 
-  if (alternatives.length > 0) {
-    console.log('\n  Alternatives');
-    for (const i of alternatives) printWarning(i.name, i.message);
-  }
+    if (alternatives.length > 0) {
+      console.log('\n  Alternatives');
+      for (const i of alternatives) printWarning(i.name, i.message);
+    }
 
-  if (allIssues.length === 0) {
-    console.log('\n  ✔ All dependency checks passed');
-  }
+    if (allIssues.length === 0) {
+      console.log('\n  ✔ All dependency checks passed');
+    }
 
-  if (!options.suppressSummary) {
-    printSummary(errors.length, warnings.length, 0);
-    const hasErrors = errors.length > 0;
-    printBuddy(
-      hasErrors ? 'error' : 'clear',
-      hasErrors ? `${errors.length} dep error(s) — fix before deploy.` : ''
-    );
+    if (!options.suppressSummary) {
+      printSummary(errors.length, warnings.length, 0);
+      const hasErrors = errors.length > 0;
+      printBuddy(
+        hasErrors ? 'error' : 'clear',
+        hasErrors ? `${errors.length} dep error(s) — fix before deploy.` : ''
+      );
+    }
   }
 
   return { errors: errors.length, warnings: warnings.length };

@@ -9,17 +9,18 @@ import { runReactHooks }     from './modules/react/hooks';
 import { runReactBundle }    from './modules/react/bundle';
 import { runReactA11y }      from './modules/react/a11y';
 import { runReactServer }    from './modules/react/server';
-import { printBuddy }   from './buddy';
-import { printSummary } from './reporter';
+import { printBuddy }                        from './buddy';
+import { printSummary, printHealthScore }    from './reporter';
 
 export const program = new Command();
 
 program
   .name('devguard')
   .description('Guard your project — env, deps, and React code quality in one command')
-  .version('1.1.0')
+  .version('2.0.0')
   .option('--json',   'output results as JSON')
   .option('--strict', 'exit with code 1 if any errors are found')
+  .option('--score',  'print health score only, no detail output')
   .action(async (opts) => {
     const cwd     = process.cwd();
     const pkgPath = path.join(cwd, 'package.json');
@@ -30,27 +31,35 @@ program
     })();
 
     // start deps async immediately so network calls run while env validates
-    const depsPromise = runDeps({ json: !!opts.json, suppressSummary: true });
+    const depsPromise = runDeps({ json: !!opts.json, suppressSummary: true, silent: !!opts.score });
     const envCounts   = runEnv({
       example:         '.env.example',
       strict:          false,
       json:            !!opts.json,
       init:            false,
       suppressSummary: true,
+      silent:          !!opts.score,
     });
     const depsCounts = await depsPromise;
 
     if (opts.json) return;
 
-    if (hasReact) {
-      console.log('\n  React project detected — run `devguard react` for React-specific checks');
-    }
-
     const totalErrors   = envCounts.errors   + depsCounts.errors;
     const totalWarnings = envCounts.warnings  + depsCounts.warnings;
     const totalPassed   = envCounts.passed;
 
+    if (opts.score) {
+      printHealthScore(totalErrors, totalWarnings);
+      if (opts.strict && totalErrors > 0) process.exit(1);
+      return;
+    }
+
+    if (hasReact) {
+      console.log('\n  React project detected — run `devguard react` for React-specific checks');
+    }
+
     printSummary(totalErrors, totalWarnings, totalPassed);
+    printHealthScore(totalErrors, totalWarnings);
     printBuddy(
       totalErrors > 0 ? 'error' : 'clear',
       totalErrors > 0 ? `${totalErrors} error(s) — fix before deploying.` : ''
