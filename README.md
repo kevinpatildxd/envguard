@@ -1,7 +1,7 @@
 # devguard
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![CI](https://github.com/kevinpatildxd/devguard/actions/workflows/test.yml/badge.svg)](https://github.com/kevinpatildxd/devguard/actions/workflows/test.yml)
+[![CI](https://github.com/kevinpatildxd/devguard/actions/workflows/ci.yml/badge.svg)](https://github.com/kevinpatildxd/devguard/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/%40kevinpatil%2Fdevguard.svg)](https://www.npmjs.com/package/@kevinpatil/devguard)
 [![npm downloads](https://img.shields.io/npm/dm/%40kevinpatil%2Fdevguard.svg)](https://www.npmjs.com/package/@kevinpatild/devguard)
 [![devguard-action](https://img.shields.io/badge/GitHub%20Actions-devguard--action-blue?logo=github-actions)](https://github.com/kevinpatildxd/devguard-action)

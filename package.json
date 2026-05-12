@@ -13,7 +13,8 @@
     "build": "tsup",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "dev": "tsup --watch"
+    "dev": "tsup --watch",
+    "ship": "npm run build && npm test && echo '\\n✅ All checks passed — push with: git push'"
   },
   "keywords": [
     "cli",

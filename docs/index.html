@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>devguard — One command to guard your project</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0b0d;
+  --s1:#0f1014;
+  --s2:#141519;
+  --border:#1e2028;
+  --border2:#252830;
+  --text:#e2e4ea;
+  --muted:#6b7280;
+  --green:#22c55e;
+  --yellow:#eab308;
+  --red:#ef4444;
+  --blue:#3b82f6;
+  --purple:#a855f7;
+  --font-sans:'Inter',sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+}
+html{scroll-behavior:smooth}
+body{
+  background:#07080c;
+  color:var(--text);
+  font-family:var(--font-sans);
+  font-size:16px;
+  line-height:1.6;
+  overflow-x:hidden;
+  background-image:
+    /* Circuit node dots */
+    radial-gradient(circle, rgba(34,197,94,0.18) 1px, transparent 1px),
+    /* Fine line grid */
+    linear-gradient(rgba(34,197,94,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34,197,94,0.04) 1px, transparent 1px),
+    /* Larger grid */
+    linear-gradient(rgba(168,85,247,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(168,85,247,0.025) 1px, transparent 1px);
+  background-size:
+    24px 24px,
+    24px 24px,
+    24px 24px,
+    96px 96px,
+    96px 96px;
+}
+
+/* Noise grain texture */
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size:160px 160px;
+  opacity:.032;
+  mix-blend-mode:overlay;
+}
+
+/* Roaming aurora blobs */
+body::after{
+  content:'';
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:0;
+  background:
+    radial-gradient(ellipse 55% 40% at 15% 20%, rgba(34,197,94,0.13) 0%, transparent 70%),
+    radial-gradient(ellipse 45% 35% at 85% 75%, rgba(168,85,247,0.11) 0%, transparent 70%),
+    radial-gradient(ellipse 35% 30% at 70% 15%, rgba(34,197,94,0.06) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 35% at 25% 80%, rgba(168,85,247,0.07) 0%, transparent 70%);
+  animation: auroraShift 8s ease-in-out infinite alternate;
+}
+@keyframes auroraShift{
+  0%  { background-position: 0% 0%, 100% 100%, 70% 0%, 20% 100%; transform: scale(1); }
+  33% { background-position: 10% 15%, 88% 80%, 60% 18%, 32% 85%; transform: scale(1.03); }
+  66% { background-position: 5% 8%,  92% 88%, 75% 8%,  15% 92%; transform: scale(0.98); }
+  100%{ background-position: 18% 5%, 82% 95%, 65% 5%,  28% 88%; transform: scale(1.04); }
+}
+
+/* SCROLL PROGRESS */
+#progress-bar{position:fixed;top:0;left:0;height:2px;width:0%;background:linear-gradient(90deg,var(--green),#4ade80);z-index:9999;transition:width .1s linear}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:900;padding:0 24px;height:64px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid transparent;transition:background .3s,border-color .3s,backdrop-filter .3s}
+nav.scrolled{background:rgba(10,11,13,.8);backdrop-filter:blur(16px);border-color:var(--border)}
+.nav-logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;color:var(--text);text-decoration:none}
+.nav-logo svg{width:28px;height:28px}
+.nav-links{display:flex;align-items:center;gap:28px}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:14px;font-weight:500;transition:color .2s}
+.nav-links a:hover{color:var(--text)}
+.btn-gh{padding:8px 16px;border:1px solid var(--border2);border-radius:8px;color:var(--text);font-size:13px;font-weight:600;text-decoration:none;transition:border-color .2s,background .2s}
+.btn-gh:hover{border-color:var(--green);background:rgba(34,197,94,.07)}
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;padding:4px;background:none;border:none}
+.hamburger span{display:block;width:22px;height:2px;background:var(--text);border-radius:2px;transition:all .3s}
+.hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.hamburger.open span:nth-child(2){opacity:0}
+.hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+
+/* MOBILE DRAWER */
+.drawer{position:fixed;top:0;right:0;width:280px;height:100vh;background:var(--s1);border-left:1px solid var(--border);z-index:800;transform:translateX(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);padding:80px 28px 32px;display:flex;flex-direction:column;gap:24px}
+.drawer.open{transform:translateX(0)}
+.drawer a{color:var(--muted);text-decoration:none;font-size:16px;font-weight:500;transition:color .2s;padding:8px 0;border-bottom:1px solid var(--border)}
+.drawer a:hover{color:var(--text)}
+.drawer-overlay{position:fixed;inset:0;z-index:799;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .35s}
+.drawer-overlay.open{opacity:1;pointer-events:auto}
+
+/* CONTAINER */
+.container{max-width:1100px;margin:0 auto;padding:0 24px}
+
+/* SECTION TAG */
+.section-tag{display:inline-flex;align-items:center;gap:8px;padding:4px 12px;border:1px solid var(--border2);border-radius:100px;font-size:12px;font-weight:600;color:var(--green);letter-spacing:.08em;text-transform:uppercase;margin-bottom:16px}
+.section-tag::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--green)}
+
+/* HERO */
+#hero{position:relative;min-height:100vh;display:flex;align-items:center;padding:100px 0 80px;overflow:hidden}
+.hero-canvas{position:absolute;inset:0;pointer-events:none}
+.hero-glow-1{position:absolute;width:900px;height:900px;border-radius:50%;background:radial-gradient(circle,rgba(34,197,94,.22) 0%,rgba(34,197,94,.07) 40%,transparent 70%);top:-22%;left:-18%;animation:floatA 7s ease-in-out infinite;pointer-events:none;filter:blur(1px)}
+.hero-glow-2{position:absolute;width:700px;height:700px;border-radius:50%;background:radial-gradient(circle,rgba(168,85,247,.19) 0%,rgba(168,85,247,.05) 40%,transparent 70%);bottom:-14%;right:-10%;animation:floatB 9s ease-in-out infinite;pointer-events:none;filter:blur(1px)}
+.hero-glow-3{position:absolute;width:460px;height:460px;border-radius:50%;background:radial-gradient(circle,rgba(168,85,247,.12) 0%,transparent 70%);top:25%;left:38%;animation:floatC 11s ease-in-out infinite;pointer-events:none;filter:blur(3px)}
+.hero-glow-4{position:absolute;width:300px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(34,197,94,.14) 0%,transparent 70%);top:55%;right:25%;animation:floatD 6s ease-in-out infinite;pointer-events:none;filter:blur(2px)}
+@keyframes floatA{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(70px,-55px) scale(1.08)}}
+@keyframes floatB{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-55px,65px) scale(1.1)}}
+@keyframes floatC{0%,100%{transform:translate(0,0)}33%{transform:translate(-45px,30px)}66%{transform:translate(35px,-45px)}}
+@keyframes floatD{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-40px) scale(1.15)}}
+.hero-inner{position:relative;z-index:2;display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 14px;background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.25);border-radius:100px;font-size:13px;color:var(--green);font-weight:500;margin-bottom:24px}
+.hero-badge-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+h1{font-size:clamp(40px,5vw,68px);font-weight:900;line-height:1.08;letter-spacing:-.03em;margin-bottom:20px}
+.gradient-text{background:linear-gradient(90deg,var(--green),#86efac,var(--blue));background-size:200% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:gradShift 4s linear infinite}
+@keyframes gradShift{0%{background-position:0% 50%}100%{background-position:200% 50%}}
+.hero-sub{font-size:17px;color:var(--muted);line-height:1.7;margin-bottom:36px;max-width:480px}
+.hero-ctas{display:flex;flex-direction:column;gap:12px;align-items:flex-start}
+.install-box{display:flex;align-items:center;gap:0;background:var(--s2);border:1px solid var(--border2);border-radius:10px;overflow:hidden;max-width:380px;width:100%}
+.install-cmd{font-family:var(--font-mono);font-size:14px;color:var(--green);padding:12px 16px;flex:1}
+.copy-btn{padding:12px 14px;border:none;background:transparent;border-left:1px solid var(--border2);cursor:pointer;color:var(--muted);transition:color .2s,background .2s;flex-shrink:0}
+.copy-btn:hover{color:var(--text);background:rgba(255,255,255,.04)}
+.copy-btn svg{display:block;width:16px;height:16px}
+.btn-secondary{display:inline-flex;align-items:center;gap:8px;padding:12px 20px;border:1px solid var(--border2);border-radius:10px;color:var(--text);font-size:14px;font-weight:600;text-decoration:none;transition:border-color .2s,background .2s}
+.btn-secondary:hover{border-color:var(--green);background:rgba(34,197,94,.05)}
+
+/* HERO TERMINAL */
+.hero-terminal{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 32px 64px rgba(0,0,0,.5)}
+.terminal-bar{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--s2)}
+.t-dot{width:12px;height:12px;border-radius:50%}
+.t-dot.r{background:#ef4444}
+.t-dot.y{background:#eab308}
+.t-dot.g{background:#22c55e}
+.terminal-title{font-family:var(--font-mono);font-size:12px;color:var(--muted);margin-left:auto;margin-right:auto}
+.terminal-body{padding:20px;font-family:var(--font-mono);font-size:12.5px;line-height:1.75;min-height:380px}
+.t-line{display:block;opacity:0;transform:translateY(4px);transition:opacity .25s,transform .25s}
+.t-line.show{opacity:1;transform:translateY(0)}
+.t-dim{color:var(--muted)}
+.t-green{color:var(--green)}
+.t-red{color:var(--red)}
+.t-yellow{color:var(--yellow)}
+.t-blue{color:var(--blue)}
+.t-bold{font-weight:600;color:var(--text)}
+.t-section{color:#4b5563;letter-spacing:.02em}
+.t-cursor{display:inline-block;width:8px;height:14px;background:var(--green);vertical-align:middle;animation:blink .9s step-end infinite;margin-left:2px}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* ── SECTION BACKGROUNDS ─────────────────────────────────── */
+#stats{
+  padding:56px 0;
+  position:relative;
+  background:linear-gradient(180deg,rgba(34,197,94,.04) 0%,transparent 100%),var(--s1);
+  border-top:1px solid rgba(34,197,94,.12);
+  border-bottom:1px solid rgba(34,197,94,.08);
+}
+#stats::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 60% 80% at 50% 50%,rgba(34,197,94,.04) 0%,transparent 70%);
+}
+#features{
+  padding:100px 0;
+  background:#07080c;
+  position:relative;
+}
+#features::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(34,197,94,.2),rgba(168,85,247,.15),transparent);
+}
+#features::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(168,85,247,.15),rgba(34,197,94,.2),transparent);
+}
+#modules{
+  padding:100px 0;
+  background:linear-gradient(180deg,rgba(168,85,247,.03) 0%,rgba(10,11,13,0) 40%),#0c0d12;
+  position:relative;
+}
+#modules::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(168,85,247,.25),transparent);
+}
+#compare{
+  padding:100px 0;
+  background:#07080c;
+  position:relative;
+}
+#compare::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(34,197,94,.18),transparent);
+}
+#ci{
+  padding:100px 0;
+  background:linear-gradient(180deg,rgba(34,197,94,.03) 0%,transparent 60%),#0c0d12;
+  position:relative;
+}
+#ci::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(34,197,94,.2),rgba(168,85,247,.12),transparent);
+}
+#install{
+  padding:100px 0;
+  background:#07080c;
+  position:relative;
+}
+#install::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(168,85,247,.2),rgba(34,197,94,.15),transparent);
+}
+#cta-banner{
+  padding:96px 0;
+  position:relative;
+  overflow:hidden;
+  background:linear-gradient(180deg,rgba(34,197,94,.05) 0%,rgba(168,85,247,.04) 100%),#0a0b0f;
+  border-top:1px solid rgba(34,197,94,.1);
+  border-bottom:1px solid rgba(168,85,247,.08);
+}
+
+/* ── STAT CARDS ──────────────────────────────────────────── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px}
+.stat-card{
+  text-align:center;padding:32px 16px;
+  border:1px solid rgba(34,197,94,.12);
+  border-radius:16px;
+  background:rgba(15,16,20,0.7);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  position:relative;overflow:hidden;
+  transition:transform .3s cubic-bezier(.4,0,.2,1),box-shadow .3s,border-color .3s;
+  cursor:default;
+}
+.stat-card::before{
+  content:'';position:absolute;inset:0;border-radius:16px;
+  background:linear-gradient(135deg,rgba(34,197,94,.06) 0%,transparent 55%,rgba(168,85,247,.04) 100%);
+  pointer-events:none;
+}
+/* shimmer sweep */
+.stat-card::after{
+  content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.04),transparent);
+  transition:left .5s ease;pointer-events:none;
+}
+.stat-card:hover{transform:translateY(-5px);border-color:rgba(34,197,94,.35);box-shadow:0 8px 32px rgba(34,197,94,.12),0 0 0 1px rgba(34,197,94,.1) inset;}
+.stat-card:hover::after{left:140%;}
+.stat-num{font-size:52px;font-weight:900;color:var(--green);letter-spacing:-.03em;line-height:1;text-shadow:0 0 32px rgba(34,197,94,.4)}
+.stat-label{font-size:13px;color:var(--muted);margin-top:8px;font-weight:500}
+
+/* ── SECTION HEADER ──────────────────────────────────────── */
+.section-header{text-align:center;margin-bottom:64px}
+.section-header h2{font-size:clamp(28px,4vw,48px);font-weight:800;letter-spacing:-.03em;margin-bottom:12px}
+.section-header p{font-size:17px;color:var(--muted);max-width:540px;margin:0 auto;line-height:1.7}
+
+/* ── FEATURE CARDS ───────────────────────────────────────── */
+.features-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.feat-card{
+  padding:28px;
+  border-radius:16px;
+  background:rgba(15,16,20,0.75);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  border:1px solid var(--border);
+  position:relative;overflow:hidden;
+  transition:transform .3s cubic-bezier(.4,0,.2,1),box-shadow .3s,border-color .3s;
+  cursor:default;
+}
+/* top gradient line */
+.feat-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--card-accent,rgba(34,197,94,.4)),transparent);
+  opacity:0;transition:opacity .3s;
+}
+/* shimmer */
+.feat-card::after{
+  content:'';position:absolute;top:0;left:-100%;width:55%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.035),transparent);
+  transition:left .55s ease;pointer-events:none;
+}
+.feat-card:hover{
+  transform:translateY(-6px);
+  border-color:var(--card-border-hover, rgba(34,197,94,.28));
+  box-shadow:0 12px 40px var(--card-shadow,rgba(34,197,94,.1)), 0 1px 0 rgba(255,255,255,.04) inset;
+}
+.feat-card:hover::before{opacity:1;}
+.feat-card:hover::after{left:140%;}
+.feat-card[data-color="green"]{--card-accent:rgba(34,197,94,.5);--card-border-hover:rgba(34,197,94,.3);--card-shadow:rgba(34,197,94,.1)}
+.feat-card[data-color="blue"]{--card-accent:rgba(59,130,246,.5);--card-border-hover:rgba(59,130,246,.3);--card-shadow:rgba(59,130,246,.1)}
+.feat-card[data-color="purple"]{--card-accent:rgba(168,85,247,.5);--card-border-hover:rgba(168,85,247,.3);--card-shadow:rgba(168,85,247,.1)}
+.feat-card[data-color="yellow"]{--card-accent:rgba(234,179,8,.5);--card-border-hover:rgba(234,179,8,.3);--card-shadow:rgba(234,179,8,.1)}
+.feat-card[data-color="red"]{--card-accent:rgba(239,68,68,.5);--card-border-hover:rgba(239,68,68,.3);--card-shadow:rgba(239,68,68,.1)}
+.feat-card[data-color="teal"]{--card-accent:rgba(20,184,166,.5);--card-border-hover:rgba(20,184,166,.3);--card-shadow:rgba(20,184,166,.1)}
+.feat-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:18px;position:relative}
+.feat-icon.green{background:rgba(34,197,94,.12);box-shadow:0 0 16px rgba(34,197,94,.15)}
+.feat-icon.blue{background:rgba(59,130,246,.12);box-shadow:0 0 16px rgba(59,130,246,.12)}
+.feat-icon.purple{background:rgba(168,85,247,.12);box-shadow:0 0 16px rgba(168,85,247,.12)}
+.feat-icon.yellow{background:rgba(234,179,8,.12);box-shadow:0 0 16px rgba(234,179,8,.1)}
+.feat-icon.red{background:rgba(239,68,68,.12);box-shadow:0 0 16px rgba(239,68,68,.1)}
+.feat-icon.teal{background:rgba(20,184,166,.12);box-shadow:0 0 16px rgba(20,184,166,.1)}
+.feat-card h3{font-size:16px;font-weight:700;margin-bottom:8px}
+.feat-card p{font-size:14px;color:var(--muted);line-height:1.65}
+
+/* ── MODULES ─────────────────────────────────────────────── */
+.tabs{
+  display:flex;gap:4px;
+  background:rgba(20,21,25,0.8);
+  backdrop-filter:blur(12px);
+  border:1px solid var(--border);
+  border-radius:10px;padding:4px;
+  width:fit-content;margin:0 auto 48px;position:relative;
+}
+.tab-btn{padding:9px 24px;border-radius:7px;border:none;background:transparent;color:var(--muted);font-family:var(--font-mono);font-size:14px;font-weight:500;cursor:pointer;transition:color .2s;position:relative;z-index:1}
+.tab-btn.active{color:var(--text)}
+.tab-indicator{
+  position:absolute;top:4px;bottom:4px;border-radius:7px;
+  background:linear-gradient(135deg,rgba(34,197,94,.15),rgba(168,85,247,.12));
+  border:1px solid rgba(34,197,94,.2);
+  transition:left .3s cubic-bezier(.4,0,.2,1),width .3s cubic-bezier(.4,0,.2,1);z-index:0;
+}
+.tab-panel{display:none;grid-template-columns:1fr 1fr;gap:48px;align-items:start}
+.tab-panel.active{display:grid}
+.tab-info h3{font-size:28px;font-weight:800;letter-spacing:-.02em;margin-bottom:12px}
+.tab-info p{color:var(--muted);line-height:1.7;margin-bottom:28px}
+.rules-list{display:flex;flex-direction:column;gap:8px;margin-bottom:28px}
+.rule-item{display:flex;align-items:center;gap:10px;font-size:13px;font-family:var(--font-mono)}
+.rule-badge{padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:.04em}
+.rule-badge.err{background:rgba(239,68,68,.15);color:var(--red)}
+.rule-badge.warn{background:rgba(234,179,8,.12);color:var(--yellow)}
+.rule-badge.info{background:rgba(59,130,246,.12);color:var(--blue)}
+.rule-badge.check{background:rgba(34,197,94,.1);color:var(--green)}
+.rule-desc{color:var(--muted)}
+.module-cmd{display:flex;align-items:center;gap:12px;background:rgba(20,21,25,0.8);backdrop-filter:blur(8px);border:1px solid rgba(34,197,94,.2);border-radius:8px;padding:10px 14px;font-family:var(--font-mono);font-size:13px;color:var(--green);box-shadow:0 0 16px rgba(34,197,94,.06)}
+
+/* Mini terminal glass */
+.mini-terminal{
+  background:rgba(15,16,20,0.75);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  border:1px solid var(--border);
+  border-radius:14px;overflow:hidden;
+  box-shadow:0 8px 32px rgba(0,0,0,.4);
+  transition:box-shadow .3s,border-color .3s;
+}
+.mini-terminal:hover{border-color:rgba(34,197,94,.2);box-shadow:0 12px 40px rgba(0,0,0,.5),0 0 20px rgba(34,197,94,.05)}
+
+/* ── COMPARISON TABLE ────────────────────────────────────── */
+.compare-table{width:100%;border-collapse:collapse;margin-top:48px;border:1px solid rgba(34,197,94,.12);border-radius:14px;overflow:hidden;backdrop-filter:blur(10px)}
+.compare-table th{padding:16px 20px;text-align:left;font-size:12px;font-weight:700;color:var(--muted);background:rgba(15,16,20,0.9);border-bottom:1px solid var(--border);letter-spacing:.06em;text-transform:uppercase}
+.compare-table th:nth-child(2){color:var(--green);background:rgba(34,197,94,.05)}
+.compare-table td{padding:14px 20px;font-size:14px;border-bottom:1px solid rgba(255,255,255,.04);transition:background .15s}
+.compare-table td:nth-child(2){background:rgba(34,197,94,.025)}
+.compare-table tr:last-child td{border-bottom:none}
+.compare-table tr:hover td{background:rgba(255,255,255,.02)}
+.compare-table tr:hover td:nth-child(2){background:rgba(34,197,94,.05)}
+.compare-table td:first-child{color:var(--muted)}
+.check-yes{color:var(--green);font-weight:700;text-shadow:0 0 12px rgba(34,197,94,.4)}
+.check-no{color:var(--red);opacity:.7}
+.check-tool{color:var(--muted);font-size:13px;font-family:var(--font-mono)}
+
+/* ── CI SECTION ──────────────────────────────────────────── */
+.ci-layout{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:start}
+.ci-badges{display:flex;flex-wrap:wrap;gap:8px;margin:24px 0}
+.ci-badge{
+  padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;color:var(--muted);
+  border:1px solid var(--border2);background:rgba(20,21,25,0.6);backdrop-filter:blur(8px);
+  transition:border-color .2s,color .2s,box-shadow .2s;cursor:default;
+}
+.ci-badge:hover{border-color:rgba(34,197,94,.3);color:var(--text);box-shadow:0 0 12px rgba(34,197,94,.08)}
+.code-block{
+  background:rgba(15,16,20,0.85);
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  border:1px solid rgba(34,197,94,.15);
+  border-radius:14px;overflow:hidden;
+  box-shadow:0 8px 32px rgba(0,0,0,.4),0 0 0 1px rgba(34,197,94,.05) inset;
+}
+.code-block-header{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.25)}
+.code-lang{font-size:12px;font-weight:600;color:var(--muted);font-family:var(--font-mono);letter-spacing:.05em}
+.code-block pre{padding:20px;font-family:var(--font-mono);font-size:13px;line-height:1.8;overflow-x:auto;color:var(--text)}
+.code-block pre .kw{color:var(--purple)}
+.code-block pre .key{color:var(--blue)}
+.code-block pre .val{color:var(--green)}
+.code-block pre .cmt{color:var(--muted)}
+
+/* ── STEP CARDS ──────────────────────────────────────────── */
+#install{padding:100px 0}
+.steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:48px}
+.step-card{
+  padding:28px;
+  border:1px solid var(--border);
+  border-radius:16px;
+  background:rgba(15,16,20,0.75);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  position:relative;overflow:hidden;
+  transition:transform .3s cubic-bezier(.4,0,.2,1),border-color .3s,box-shadow .3s;
+}
+/* animated top accent bar */
+.step-card::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,rgba(34,197,94,.6),rgba(168,85,247,.4),transparent);
+  transform:scaleX(0);transform-origin:left;
+  transition:transform .4s cubic-bezier(.4,0,.2,1);
+}
+.step-card::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(135deg,rgba(34,197,94,.04) 0%,transparent 50%,rgba(168,85,247,.03) 100%);
+  pointer-events:none;
+}
+.step-card:hover{transform:translateY(-5px);border-color:rgba(34,197,94,.25);box-shadow:0 12px 36px rgba(0,0,0,.4),0 0 24px rgba(34,197,94,.07)}
+.step-card:hover::before{transform:scaleX(1);}
+.step-num{font-size:48px;font-weight:900;color:rgba(34,197,94,.15);letter-spacing:-.05em;line-height:1;margin-bottom:16px;font-family:var(--font-mono)}
+.step-card h3{font-size:17px;font-weight:700;margin-bottom:8px}
+.step-card p{font-size:14px;color:var(--muted);line-height:1.65;margin-bottom:16px}
+.step-code{font-family:var(--font-mono);font-size:12.5px;color:var(--green);background:var(--s2);border:1px solid var(--border);border-radius:7px;padding:10px 14px}
+
+/* CTA BANNER */
+#cta-banner{padding:96px 0;position:relative;overflow:hidden}
+.cta-glow{position:absolute;width:600px;height:300px;border-radius:50%;background:radial-gradient(circle,rgba(34,197,94,.09) 0%,transparent 70%);top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none}
+.cta-inner{position:relative;z-index:1;text-align:center;max-width:600px;margin:0 auto}
+.cta-inner h2{font-size:clamp(28px,4vw,48px);font-weight:900;letter-spacing:-.03em;margin-bottom:12px}
+.cta-inner p{color:var(--muted);font-size:17px;margin-bottom:36px}
+.cta-actions{display:flex;align-items:center;justify-content:center;gap:16px;flex-wrap:wrap}
+.btn-star{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border:1px solid rgba(234,179,8,.4);border-radius:10px;color:var(--yellow);font-size:14px;font-weight:700;text-decoration:none;transition:background .2s,border-color .2s}
+.btn-star:hover{background:rgba(234,179,8,.08);border-color:var(--yellow)}
+
+/* FOOTER */
+footer{padding:40px 0;border-top:1px solid var(--border)}
+.footer-inner{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:20px}
+.footer-logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:16px;color:var(--text)}
+.footer-logo svg{width:24px;height:24px}
+.v-pill{padding:2px 8px;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:4px;font-size:11px;color:var(--green);font-family:var(--font-mono);font-weight:600}
+.footer-links{display:flex;gap:24px}
+.footer-links a{color:var(--muted);text-decoration:none;font-size:14px;transition:color .2s}
+.footer-links a:hover{color:var(--text)}
+.footer-copy{font-size:13px;color:var(--muted)}
+
+/* REVEAL ANIMATIONS */
+.reveal{opacity:0;transform:translateY(32px);transition:opacity .7s cubic-bezier(.4,0,.2,1),transform .7s cubic-bezier(.4,0,.2,1)}
+.reveal.visible{opacity:1;transform:none}
+
+/* MINI TERMINAL (modules) */
+.mini-terminal{background:var(--s2);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.mini-terminal-bar{display:flex;align-items:center;gap:6px;padding:10px 14px;border-bottom:1px solid var(--border);background:rgba(0,0,0,.2)}
+.mini-terminal-body{padding:16px;font-family:var(--font-mono);font-size:12px;line-height:1.8}
+
+/* HERO SVG ILLUSTRATION */
+.hero-shield{position:absolute;right:-60px;top:50%;transform:translateY(-50%);opacity:.04;pointer-events:none}
+
+/* SOCIAL PROOF */
+#social-proof{padding:16px 0;border-bottom:1px solid var(--border);background:var(--s1)}
+.proof-strip{display:flex;align-items:center;justify-content:center;gap:40px;flex-wrap:wrap}
+.proof-item{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.proof-item strong{color:var(--text);font-weight:700}
+.proof-dot{width:4px;height:4px;border-radius:50%;background:var(--border2)}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  .hero-inner{grid-template-columns:1fr;gap:40px}
+  .features-grid{grid-template-columns:repeat(2,1fr)}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .tab-panel.active{grid-template-columns:1fr}
+  .ci-layout{grid-template-columns:1fr}
+  .steps-grid{grid-template-columns:1fr}
+  .compare-table{font-size:13px}
+  .nav-links{display:none}
+  .hamburger{display:flex}
+}
+@media(max-width:620px){
+  .features-grid{grid-template-columns:1fr}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .hero-terminal{display:none}
+  .proof-strip{gap:16px}
+}
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+
+<!-- NAV -->
+<nav id="nav">
+  <a href="#" class="nav-logo" aria-label="devguard home">
+    <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M14 2L4 6.5V13c0 5.5 4 10.5 10 12 6-1.5 10-6.5 10-12V6.5L14 2Z" fill="rgba(34,197,94,.15)" stroke="#22c55e" stroke-width="1.5" stroke-linejoin="round"/>
+      <path d="M9.5 14l3 3 6-6" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    devguard
+  </a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#modules">Modules</a>
+    <a href="#install">Install</a>
+    <a href="https://github.com/kevinpatildxd/devguard" target="_blank" rel="noopener" class="btn-gh">GitHub ↗</a>
+  </div>
+  <button class="hamburger" id="hamburger" aria-label="Open menu" aria-expanded="false">
+    <span></span><span></span><span></span>
+  </button>
+</nav>
+
+<!-- MOBILE DRAWER -->
+<div class="drawer-overlay" id="drawer-overlay"></div>
+<div class="drawer" id="drawer" aria-hidden="true">
+  <a href="#features" onclick="closeDrawer()">Features</a>
+  <a href="#modules" onclick="closeDrawer()">Modules</a>
+  <a href="#install" onclick="closeDrawer()">Install</a>
+  <a href="https://github.com/kevinpatildxd/devguard" target="_blank" rel="noopener" onclick="closeDrawer()">GitHub ↗</a>
+</div>
+
+<!-- HERO -->
+<section id="hero">
+  <canvas class="hero-canvas" id="particle-canvas" aria-hidden="true"></canvas>
+  <div class="hero-glow-1" aria-hidden="true"></div>
+  <div class="hero-glow-2" aria-hidden="true"></div>
+  <div class="hero-glow-3" aria-hidden="true"></div>
+  <div class="hero-glow-4" aria-hidden="true"></div>
+  <canvas id="grid-canvas" aria-hidden="true" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:.35"></canvas>
+  <div class="container">
+    <div class="hero-inner">
+      <div class="hero-left">
+        <div class="hero-badge">
+          <span class="hero-badge-dot" aria-hidden="true"></span>
+          v2.0.0 — now with React a11y &amp; RSC checks
+        </div>
+        <h1>One command to<br><span class="gradient-text">guard your project</span></h1>
+        <p class="hero-sub">Validates env files, audits dependencies, and checks React code quality — all in one fast CLI. No config files. No API keys. Works offline, in Docker, everywhere.</p>
+        <div class="hero-ctas">
+          <div class="install-box" role="group" aria-label="Install command">
+            <span class="install-cmd">$ npx @kevinpatil/devguard</span>
+            <button class="copy-btn" id="copy-hero" aria-label="Copy install command" title="Copy">
+              <svg id="copy-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="5" width="9" height="9" rx="1.5"/>
+                <path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5"/>
+              </svg>
+            </button>
+          </div>
+          <a href="https://github.com/kevinpatildxd/devguard" target="_blank" rel="noopener" class="btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2Z"/></svg>
+            View on GitHub ↗
+          </a>
+        </div>
+      </div>
+      <div class="hero-right">
+        <div class="hero-terminal" role="region" aria-label="Terminal demo">
+          <div class="terminal-bar" aria-hidden="true">
+            <div class="t-dot r"></div>
+            <div class="t-dot y"></div>
+            <div class="t-dot g"></div>
+            <div class="terminal-title">devguard — zsh</div>
+          </div>
+          <div class="terminal-body" id="terminal-body" aria-live="polite">
+            <span class="t-line show t-dim">$ npx @kevinpatil/devguard</span>
+            <span class="t-cursor" id="t-cursor" aria-hidden="true"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SOCIAL PROOF -->
+<div id="social-proof">
+  <div class="container">
+    <div class="proof-strip">
+      <div class="proof-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0 1 12 6.844a9.59 9.59 0 0 1 2.504.337c1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.02 10.02 0 0 0 22 12.017C22 6.484 17.522 2 12 2Z"/></svg>
+        <strong>2.4k</strong> GitHub Stars
+      </div>
+      <div class="proof-dot" aria-hidden="true"></div>
+      <div class="proof-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/></svg>
+        <strong>12k+</strong> Weekly Downloads
+      </div>
+      <div class="proof-dot" aria-hidden="true"></div>
+      <div class="proof-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+        Works offline, zero config
+      </div>
+      <div class="proof-dot" aria-hidden="true"></div>
+      <div class="proof-item">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+        MIT Licensed — Free Forever
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STATS STRIP -->
+<section id="stats">
+  <div class="container">
+    <div class="stats-grid">
+      <div class="stat-card reveal">
+        <div class="stat-num" data-count="8">0</div>
+        <div class="stat-label">Env validation rules</div>
+      </div>
+      <div class="stat-card reveal" style="transition-delay:.06s">
+        <div class="stat-num" data-count="4">0</div>
+        <div class="stat-label">Dep audit checks</div>
+      </div>
+      <div class="stat-card reveal" style="transition-delay:.12s">
+        <div class="stat-num" data-count="6">0</div>
+        <div class="stat-label">React audit modules</div>
+      </div>
+      <div class="stat-card reveal" style="transition-delay:.18s">
+        <div class="stat-num" data-count="0">0</div>
+        <div class="stat-label">API keys needed</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="container">
+    <div class="section-header reveal">
+      <div class="section-tag">Why devguard</div>
+      <h2>Replace five tools with one</h2>
+      <p>Stop juggling depcheck, npm-check, npm audit, ESLint, and manual .env reviews. One command covers all of it.</p>
+    </div>
+    <div class="features-grid">
+      <div class="feat-card reveal" data-color="green">
+        <div class="feat-icon green" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2H3v16h5v4l4-4h5l4-4V2z"/><path d="M11 11V7"/><path d="M11 15v.01"/></svg>
+        </div>
+        <h3>Env Validation</h3>
+        <p>Catches missing keys, insecure defaults, type mismatches, weak secrets, and cross-env inconsistencies before your app ships.</p>
+      </div>
+      <div class="feat-card reveal" data-color="blue" style="transition-delay:.06s">
+        <div class="feat-icon blue" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/></svg>
+        </div>
+        <h3>Dep Auditing</h3>
+        <p>Finds unused packages, outdated versions, real CVEs via OSV.dev, and suggests lightweight alternatives with size savings.</p>
+      </div>
+      <div class="feat-card reveal" data-color="purple" style="transition-delay:.12s">
+        <div class="feat-icon purple" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+        </div>
+        <h3>React Analysis</h3>
+        <p>Dead imports, re-render risks, hooks rule violations, bundle size, accessibility issues, and RSC boundary bugs — all static, no browser needed.</p>
+      </div>
+      <div class="feat-card reveal" data-color="yellow" style="transition-delay:.06s">
+        <div class="feat-icon yellow" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#eab308" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/></svg>
+        </div>
+        <h3>CI Ready</h3>
+        <p>Exit with code 1 on errors via <code style="font-family:var(--font-mono);font-size:12px;color:var(--muted)">--strict</code>. JSON output for custom pipelines. Works in Docker, GitHub Actions, any CI.</p>
+      </div>
+      <div class="feat-card reveal" data-color="teal" style="transition-delay:.12s">
+        <div class="feat-icon teal" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#14b8a6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </div>
+        <h3>Works Offline</h3>
+        <p>Local disk cache at <code style="font-family:var(--font-mono);font-size:12px;color:var(--muted)">~/.devguard/cache.json</code> with 24hr TTL. Repeated runs are near-instant and fully offline-friendly.</p>
+      </div>
+      <div class="feat-card reveal" data-color="red" style="transition-delay:.18s">
+        <div class="feat-icon red" aria-hidden="true">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <h3>Zero Config</h3>
+        <p>No config files, no API keys, no setup. Run <code style="font-family:var(--font-mono);font-size:12px;color:var(--muted)">npx @kevinpatil/devguard</code> in any project and get a full report in seconds.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MODULES -->
+<section id="modules">
+  <div class="container">
+    <div class="section-header reveal">
+      <div class="section-tag">Modules</div>
+      <h2>Every check, one tool</h2>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Module tabs" id="tabs-container">
+      <div class="tab-indicator" id="tab-indicator"></div>
+      <button class="tab-btn active" role="tab" aria-selected="true" aria-controls="tab-env" id="tab-btn-env" data-tab="env">env</button>
+      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-deps" id="tab-btn-deps" data-tab="deps">deps</button>
+      <button class="tab-btn" role="tab" aria-selected="false" aria-controls="tab-react" id="tab-btn-react" data-tab="react">react</button>
+    </div>
+
+    <!-- ENV TAB -->
+    <div class="tab-panel active" id="tab-env" role="tabpanel" aria-labelledby="tab-btn-env">
+      <div class="tab-info reveal">
+        <h3>devguard env</h3>
+        <p>Validates all your <code style="font-family:var(--font-mono);color:var(--green)">.env</code> files against <code style="font-family:var(--font-mono);color:var(--green)">.env.example</code>. Catches config bugs before they hit production.</p>
+        <div class="rules-list">
+          <div class="rule-item"><span class="rule-badge err">ERROR</span><span class="rule-desc">Missing required key</span></div>
+          <div class="rule-item"><span class="rule-badge err">ERROR</span><span class="rule-desc">Empty value</span></div>
+          <div class="rule-item"><span class="rule-badge err">ERROR</span><span class="rule-desc">Insecure placeholder (changeme, secret)</span></div>
+          <div class="rule-item"><span class="rule-badge warn">WARN</span><span class="rule-desc">Undeclared key</span></div>
+          <div class="rule-item"><span class="rule-badge warn">WARN</span><span class="rule-desc">Type mismatch (PORT should be a number)</span></div>
+          <div class="rule-item"><span class="rule-badge warn">WARN</span><span class="rule-desc">Malformed URL</span></div>
+          <div class="rule-item"><span class="rule-badge warn">WARN</span><span class="rule-desc">Weak secret length</span></div>
+          <div class="rule-item"><span class="rule-badge warn">WARN</span><span class="rule-desc">Boolean mismatch</span></div>
+        </div>
+        <div class="module-cmd">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+          npx @kevinpatil/devguard env
+        </div>
+      </div>
+      <div class="mini-terminal reveal" style="transition-delay:.1s">
+        <div class="mini-terminal-bar" aria-hidden="true">
+          <div class="t-dot r"></div><div class="t-dot y"></div><div class="t-dot g"></div>
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-left:8px">devguard env</span>
+        </div>
+        <div class="mini-terminal-body">
+          <span class="t-dim">$ devguard env</span><br><br>
+          <span style="color:var(--muted)">── .env ──────────────────────</span><br>
+          <span class="t-red">  ✗ DATABASE_URL — Missing required key</span><br>
+          <span class="t-red">  ✗ JWT_SECRET — Insecure value: 'secret'</span><br>
+          <span class="t-yellow">  ⚠ PORT — Expected number, got 'abc'</span><br>
+          <span class="t-yellow">  ⚠ STRIPE_KEY — Not in .env.example</span><br><br>
+          <span style="color:var(--muted)">── .env.staging ──────────────</span><br>
+          <span class="t-green">  ✔ All checks passed</span><br><br>
+          <span class="t-red">✗ 2 error(s) across 2 file(s)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- DEPS TAB -->
+    <div class="tab-panel" id="tab-deps" role="tabpanel" aria-labelledby="tab-btn-deps">
+      <div class="tab-info reveal">
+        <h3>devguard deps</h3>
+        <p>Full dependency health audit. Unused packages, outdated versions, real CVEs, and lighter alternatives.</p>
+        <div class="rules-list">
+          <div class="rule-item"><span class="rule-badge check">CHECK</span><span class="rule-desc">Unused package detection (AST-based)</span></div>
+          <div class="rule-item"><span class="rule-badge check">CHECK</span><span class="rule-desc">Outdated version scanner (npm Registry)</span></div>
+          <div class="rule-item"><span class="rule-badge check">CHECK</span><span class="rule-desc">Vulnerability audit (OSV.dev, free)</span></div>
+          <div class="rule-item"><span class="rule-badge info">INFO</span><span class="rule-desc">Lightweight alternative suggestions</span></div>
+        </div>
+        <div class="module-cmd">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+          npx @kevinpatil/devguard deps
+        </div>
+      </div>
+      <div class="mini-terminal reveal" style="transition-delay:.1s">
+        <div class="mini-terminal-bar" aria-hidden="true">
+          <div class="t-dot r"></div><div class="t-dot y"></div><div class="t-dot g"></div>
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-left:8px">devguard deps</span>
+        </div>
+        <div class="mini-terminal-body">
+          <span class="t-dim">$ devguard deps</span><br><br>
+          <span style="color:var(--muted)">── UNUSED (2) ────────────────</span><br>
+          <span class="t-red">  ✗ moment — imported nowhere</span><br>
+          <span class="t-red">  ✗ lodash — imported nowhere</span><br><br>
+          <span style="color:var(--muted)">── OUTDATED (1) ──────────────</span><br>
+          <span class="t-yellow">  ⚠ axios  0.27.0 → 1.7.2</span><br><br>
+          <span style="color:var(--muted)">── VULNERABILITIES (1) ───────</span><br>
+          <span class="t-red">  ✗ express@4.18.0  CVE-2024-29041</span><br><br>
+          <span style="color:var(--muted)">── ALTERNATIVES ──────────────</span><br>
+          <span class="t-blue">  ⚡ moment → dayjs  saves 65KB</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- REACT TAB -->
+    <div class="tab-panel" id="tab-react" role="tabpanel" aria-labelledby="tab-btn-react">
+      <div class="tab-info reveal">
+        <h3>devguard react</h3>
+        <p>Six React audit checks — all static analysis, no browser, no runtime. Works on any React or Next.js project.</p>
+        <div class="rules-list">
+          <div class="rule-item"><span class="rule-badge check">CHECK</span><span class="rule-desc">react:imports — Dead components &amp; unused imports</span></div>
+          <div class="rule-item"><span class="rule-badge check">CHECK</span><span class="rule-desc">react:rerenders — Inline objects, arrow fns in JSX</span></div>
+          <div class="rule-item"><span class="rule-badge check">CHECK</span><span class="rule-desc">react:hooks — Rules of hooks violations</span></div>
+          <div class="rule-item"><span class="rule-badge info">INFO</span><span class="rule-desc">react:bundle — Heavy packages &amp; alternatives</span></div>
+          <div class="rule-item"><span class="rule-badge check">CHECK</span><span class="rule-desc">react:a11y — Accessibility static scan</span></div>
+          <div class="rule-item"><span class="rule-badge check">CHECK</span><span class="rule-desc">react:server — RSC boundary violations</span></div>
+        </div>
+        <div class="module-cmd">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+          npx @kevinpatil/devguard react
+        </div>
+      </div>
+      <div class="mini-terminal reveal" style="transition-delay:.1s">
+        <div class="mini-terminal-bar" aria-hidden="true">
+          <div class="t-dot r"></div><div class="t-dot y"></div><div class="t-dot g"></div>
+          <span style="font-family:var(--font-mono);font-size:11px;color:var(--muted);margin-left:8px">devguard react</span>
+        </div>
+        <div class="mini-terminal-body">
+          <span class="t-dim">$ devguard react</span><br><br>
+          <span style="color:var(--muted)">── IMPORTS ───────────────────</span><br>
+          <span class="t-red">  ✗ OldModal.tsx — dead component</span><br><br>
+          <span style="color:var(--muted)">── RERENDERS ─────────────────</span><br>
+          <span class="t-yellow">  ⚠ Home.tsx:42 — inline object prop</span><br><br>
+          <span style="color:var(--muted)">── HOOKS ─────────────────────</span><br>
+          <span class="t-red">  ✗ Form.tsx:31 — hook inside if block</span><br><br>
+          <span style="color:var(--muted)">── A11Y ──────────────────────</span><br>
+          <span class="t-red">  ✗ Avatar.tsx:12 — img missing alt</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COMPARISON TABLE -->
+<section id="compare">
+  <div class="container">
+    <div class="section-header reveal">
+      <h2>One tool. No compromises.</h2>
+      <p>Here's what you'd need to replace devguard:</p>
+    </div>
+    <div class="reveal" style="overflow-x:auto">
+      <table class="compare-table" aria-label="devguard vs manual tools comparison">
+        <thead>
+          <tr>
+            <th>Check</th>
+            <th>✦ devguard</th>
+            <th>Without devguard</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>Env validation</td><td><span class="check-yes">✔ built-in</span></td><td><span class="check-tool">manual review</span></td></tr>
+          <tr><td>Unused deps</td><td><span class="check-yes">✔ built-in</span></td><td><span class="check-tool">depcheck</span></td></tr>
+          <tr><td>Outdated deps</td><td><span class="check-yes">✔ built-in</span></td><td><span class="check-tool">npm-check</span></td></tr>
+          <tr><td>CVE scan</td><td><span class="check-yes">✔ built-in</span></td><td><span class="check-tool">npm audit / Snyk</span></td></tr>
+          <tr><td>React lint</td><td><span class="check-yes">✔ built-in</span></td><td><span class="check-tool">ESLint + plugins</span></td></tr>
+          <tr><td>Accessibility</td><td><span class="check-yes">✔ built-in</span></td><td><span class="check-tool">axe / eslint-plugin-jsx-a11y</span></td></tr>
+          <tr><td>RSC checks</td><td><span class="check-yes">✔ built-in</span></td><td><span class="check-no" aria-label="not available">✘ nothing</span></td></tr>
+          <tr><td>Config needed</td><td><span class="check-yes">✔ none</span></td><td><span class="check-tool">multiple config files</span></td></tr>
+          <tr><td>API keys</td><td><span class="check-yes">✔ none</span></td><td><span class="check-tool">Snyk requires sign-up</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- CI INTEGRATION -->
+<section id="ci">
+  <div class="container">
+    <div class="ci-layout">
+      <div class="reveal">
+        <div class="section-tag">CI Integration</div>
+        <h2 style="font-size:clamp(26px,3.5vw,40px);font-weight:800;letter-spacing:-.03em;margin:16px 0 12px">Ship with confidence</h2>
+        <p style="color:var(--muted);line-height:1.7;margin-bottom:20px">Add devguard to your pipeline in one line. Exits with code 1 on any error so broken builds never reach production.</p>
+        <div class="ci-badges">
+          <span class="ci-badge">GitHub Actions</span>
+          <span class="ci-badge">GitLab CI</span>
+          <span class="ci-badge">CircleCI</span>
+          <span class="ci-badge">Docker</span>
+          <span class="ci-badge">Any CI</span>
+        </div>
+      </div>
+      <div class="code-block reveal" style="transition-delay:.1s">
+        <div class="code-block-header">
+          <span class="code-lang">YAML</span>
+          <button class="copy-btn" id="copy-yaml" aria-label="Copy YAML" title="Copy" style="border:none;background:none;cursor:pointer;color:var(--muted);transition:color .2s;padding:0" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5"/></svg>
+          </button>
+        </div>
+        <pre aria-label="CI YAML example"><span class="kw">- name:</span> <span class="val">Run devguard</span>
+  <span class="key">run:</span> <span class="val">npx @kevinpatil/devguard --strict</span>
+
+<span class="cmt"># JSON output for custom pipelines</span>
+<span class="kw">- name:</span> <span class="val">Guard (JSON)</span>
+  <span class="key">run:</span> <span class="val">npx @kevinpatil/devguard --json \</span>
+         <span class="val">| jq '.files[].issues[]'</span></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- GET STARTED -->
+<section id="install">
+  <div class="container">
+    <div class="section-header reveal">
+      <div class="section-tag">Get Started</div>
+      <h2>Up in seconds</h2>
+    </div>
+    <div class="steps-grid">
+      <div class="step-card reveal">
+        <div class="step-num">01</div>
+        <h3>No install needed</h3>
+        <p>Run instantly with npx. No global install, no setup, no config file.</p>
+        <div class="step-code">$ npx @kevinpatil/devguard</div>
+      </div>
+      <div class="step-card reveal" style="transition-delay:.06s">
+        <div class="step-num">02</div>
+        <h3>Or add as dev dep</h3>
+        <p>Install once, run as a script. Pairs perfectly with pre-commit hooks.</p>
+        <div class="step-code">$ npm i -D @kevinpatil/devguard</div>
+      </div>
+      <div class="step-card reveal" style="transition-delay:.12s">
+        <div class="step-num">03</div>
+        <h3>Run specific checks</h3>
+        <p>Target exactly what you need. Every module works standalone.</p>
+        <div class="step-code">$ npx @kevinpatil/devguard env</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA BANNER -->
+<section id="cta-banner">
+  <div class="cta-glow" aria-hidden="true"></div>
+  <div class="container">
+    <div class="cta-inner reveal">
+      <h2>Ready to <span class="gradient-text">guard your project?</span></h2>
+      <p>Catch bugs before they ship. Free, open source, forever.</p>
+      <div class="cta-actions">
+        <div class="install-box" role="group" aria-label="Install command">
+          <span class="install-cmd">$ npx @kevinpatil/devguard</span>
+          <button class="copy-btn" id="copy-cta" aria-label="Copy install command" title="Copy">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="5" y="5" width="9" height="9" rx="1.5"/>
+              <path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5"/>
+            </svg>
+          </button>
+        </div>
+        <a href="https://github.com/kevinpatildxd/devguard" target="_blank" rel="noopener" class="btn-star">★ Star on GitHub</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-logo">
+        <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M14 2L4 6.5V13c0 5.5 4 10.5 10 12 6-1.5 10-6.5 10-12V6.5L14 2Z" fill="rgba(34,197,94,.15)" stroke="#22c55e" stroke-width="1.5" stroke-linejoin="round"/>
+          <path d="M9.5 14l3 3 6-6" stroke="#22c55e" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        devguard
+        <span class="v-pill">v2.0.0</span>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/kevinpatildxd/devguard" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://www.npmjs.com/package/@kevinpatil/devguard" target="_blank" rel="noopener">npm</a>
+        <a href="https://github.com/kevinpatildxd/devguard/issues" target="_blank" rel="noopener">Issues</a>
+        <a href="https://github.com/kevinpatildxd/devguard/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contribute</a>
+      </div>
+      <div class="footer-copy">MIT © Kevin Patil</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ===================== SCROLL PROGRESS ===================== */
+const progressBar = document.getElementById('progress-bar');
+const navEl = document.getElementById('nav');
+function onScroll() {
+  const scrollTop = window.scrollY;
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  progressBar.style.width = (scrollTop / docHeight * 100) + '%';
+  navEl.classList.toggle('scrolled', scrollTop > 20);
+}
+window.addEventListener('scroll', onScroll, {passive: true});
+
+/* ===================== MOBILE DRAWER ===================== */
+const hamburger = document.getElementById('hamburger');
+const drawer = document.getElementById('drawer');
+const overlay = document.getElementById('drawer-overlay');
+function closeDrawer() {
+  hamburger.classList.remove('open');
+  hamburger.setAttribute('aria-expanded','false');
+  drawer.classList.remove('open');
+  drawer.setAttribute('aria-hidden','true');
+  overlay.classList.remove('open');
+}
+hamburger.addEventListener('click', function() {
+  const isOpen = drawer.classList.toggle('open');
+  hamburger.classList.toggle('open');
+  hamburger.setAttribute('aria-expanded', isOpen);
+  drawer.setAttribute('aria-hidden', !isOpen);
+  overlay.classList.toggle('open', isOpen);
+});
+overlay.addEventListener('click', closeDrawer);
+
+/* ===================== PERSPECTIVE GRID CANVAS ===================== */
+(function(){
+  const canvas = document.getElementById('grid-canvas');
+  if(!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let W, H;
+  function resize(){
+    W = canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+    H = canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    drawGrid();
+  }
+  function drawGrid(){
+    const w = canvas.offsetWidth, h = canvas.offsetHeight;
+    ctx.clearRect(0,0,w,h);
+    const vx = w/2, vy = h*0.72;
+    const cols = 18, rows = 14;
+    const spread = w * 1.1;
+    // Vertical lines fanning from vanishing point
+    for(let i=0;i<=cols;i++){
+      const t = i/cols;
+      const bx = (t - 0.5) * spread + w/2;
+      const alpha = 0.055 - Math.abs(t-0.5)*0.09;
+      if(alpha<=0) continue;
+      ctx.beginPath();
+      ctx.moveTo(vx, vy);
+      ctx.lineTo(bx, h);
+      ctx.strokeStyle = `rgba(34,197,94,${alpha})`;
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+    }
+    // Horizontal lines (perspective)
+    for(let j=1;j<=rows;j++){
+      const t = Math.pow(j/rows, 1.8);
+      const y = vy + (h - vy) * t;
+      const halfW = (spread/2) * t;
+      const alpha = 0.025 + t * 0.055;
+      ctx.beginPath();
+      ctx.moveTo(w/2 - halfW, y);
+      ctx.lineTo(w/2 + halfW, y);
+      ctx.strokeStyle = `rgba(34,197,94,${alpha})`;
+      ctx.lineWidth = 0.7;
+      ctx.stroke();
+    }
+    // Vanishing point glow
+    const grad = ctx.createRadialGradient(vx,vy,0,vx,vy,180);
+    grad.addColorStop(0,'rgba(34,197,94,0.07)');
+    grad.addColorStop(1,'rgba(34,197,94,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(vx-180,vy-180,360,360);
+  }
+  window.addEventListener('resize',()=>{ canvas.removeAttribute('style-scale'); resize(); });
+  resize();
+})();
+
+/* ===================== PARTICLE CANVAS ===================== */
+(function(){
+  const canvas = document.getElementById('particle-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, particles;
+  function resize(){
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+  const colorSets = [
+    ['rgba(34,197,94,',  '#22c55e'],
+    ['rgba(34,197,94,',  '#22c55e'],
+    ['rgba(34,197,94,',  '#22c55e'],
+    ['rgba(168,85,247,', '#a855f7'],
+    ['rgba(168,85,247,', '#a855f7'],
+    ['rgba(255,255,255,','#ffffff'],
+  ];
+  function makeParticle(){
+    const depth = Math.random();
+    const cs = colorSets[Math.floor(Math.random()*colorSets.length)];
+    return {
+      x: Math.random()*W, y: Math.random()*H,
+      vx: (Math.random()-.5)*(0.5 + depth*1.0),
+      vy: (Math.random()-.5)*(0.5 + depth*1.0),
+      r: 0.5 + depth*2.2,
+      depth, cs,
+      opacity: 0.25 + depth*0.7,
+      pulse: Math.random()*Math.PI*2,
+      pulseSpeed: 0.02 + Math.random()*0.03,
+    };
+  }
+  particles = Array.from({length:110}, makeParticle);
+  let frame = 0;
+  function draw(){
+    frame++;
+    ctx.clearRect(0,0,W,H);
+    for(let i=0;i<particles.length;i++){
+      const p = particles[i];
+      p.x += p.vx; p.y += p.vy;
+      p.pulse += p.pulseSpeed;
+      if(p.x<-10) p.x=W+10; else if(p.x>W+10) p.x=-10;
+      if(p.y<-10) p.y=H+10; else if(p.y>H+10) p.y=-10;
+      const pulseFactor = 0.85 + Math.sin(p.pulse)*0.15;
+      const r = p.r * pulseFactor;
+      const op = p.opacity * pulseFactor;
+      // Glow halo for near particles
+      if(p.depth > 0.5){
+        const grd = ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,r*6);
+        grd.addColorStop(0, p.cs[0]+(op*0.5)+')');
+        grd.addColorStop(0.4, p.cs[0]+(op*0.15)+')');
+        grd.addColorStop(1, p.cs[0]+'0)');
+        ctx.beginPath();
+        ctx.arc(p.x,p.y,r*6,0,Math.PI*2);
+        ctx.fillStyle=grd;
+        ctx.fill();
+      }
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,r,0,Math.PI*2);
+      ctx.fillStyle = p.cs[0]+op+')';
+      ctx.fill();
+      // Connection lines
+      for(let j=i+1;j<particles.length;j++){
+        const q=particles[j];
+        const d=Math.hypot(p.x-q.x,p.y-q.y);
+        const maxDist = 120 + p.depth*50;
+        if(d<maxDist){
+          const alpha = (1-d/maxDist)*0.12*Math.min(p.depth,q.depth+0.2);
+          // Color-mix the line between the two particle colors
+          const useGreen = p.cs[1]==='#22c55e' || q.cs[1]==='#22c55e';
+          ctx.beginPath();
+          ctx.moveTo(p.x,p.y);
+          ctx.lineTo(q.x,q.y);
+          ctx.strokeStyle = useGreen ? 'rgba(34,197,94,'+alpha+')' : 'rgba(168,85,247,'+alpha+')';
+          ctx.lineWidth = 0.4 + p.depth*0.7;
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+/* ===================== TERMINAL TYPEWRITER ===================== */
+const terminalLines = [
+  {cls:'t-dim', text:'devguard v2.0.0 — scanning project...'},
+  {cls:'', text:''},
+  {cls:'t-section', text:'━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'},
+  {cls:'t-bold', text:'  ENV AUDIT'},
+  {cls:'t-section', text:'━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'},
+  {cls:'t-red', text:'  ✗ DATABASE_URL — Missing required key'},
+  {cls:'t-red', text:'  ✗ JWT_SECRET — Insecure value: \'secret\''},
+  {cls:'t-yellow', text:'  ⚠ PORT — Expected number, got \'abc\''},
+  {cls:'', text:''},
+  {cls:'t-section', text:'━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'},
+  {cls:'t-bold', text:'  DEPS AUDIT'},
+  {cls:'t-section', text:'━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'},
+  {cls:'t-red', text:'  ✗ moment — imported nowhere in source'},
+  {cls:'t-yellow', text:'  ⚠ axios — 0.27.0 → 1.7.2'},
+  {cls:'t-red', text:'  ✗ express@4.18.0 CVE-2024-29041 High'},
+  {cls:'', text:''},
+  {cls:'t-section', text:'━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'},
+  {cls:'t-bold', text:'  REACT AUDIT'},
+  {cls:'t-section', text:'━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'},
+  {cls:'t-yellow', text:'  ⚠ Home.tsx:42 — inline object prop causes re-renders'},
+  {cls:'t-red', text:'  ✗ Avatar.tsx:12 — <img> missing alt attribute'},
+  {cls:'', text:''},
+  {cls:'t-section', text:'━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'},
+  {cls:'t-bold', text:'  SUMMARY'},
+  {cls:'t-section', text:'━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'},
+  {cls:'t-red', text:'  4 errors  3 warnings  9 passed'},
+  {cls:'t-muted', text:'  Fix errors before deploying. Run with --json for CI.'},
+];
+let terminalStarted = false;
+function startTerminal(){
+  if(terminalStarted) return;
+  terminalStarted = true;
+  const body = document.getElementById('terminal-body');
+  const cursor = document.getElementById('t-cursor');
+  let delay = 300;
+  terminalLines.forEach((line, i) => {
+    setTimeout(() => {
+      const span = document.createElement('span');
+      span.className = 't-line ' + (line.cls || '');
+      span.textContent = line.text;
+      body.insertBefore(span, cursor);
+      requestAnimationFrame(() => { span.classList.add('show'); });
+    }, delay);
+    delay += line.text ? 120 : 60;
+  });
+}
+const termObs = new IntersectionObserver(entries => {
+  if(entries[0].isIntersecting) { startTerminal(); termObs.disconnect(); }
+}, {threshold:.3});
+const termEl = document.querySelector('.hero-terminal');
+if(termEl) termObs.observe(termEl);
+
+/* ===================== COUNT UP ===================== */
+function countUp(el, target, duration){
+  const start = performance.now();
+  function step(now){
+    const p = Math.min((now-start)/duration,1);
+    const ease = 1-Math.pow(1-p,3);
+    el.textContent = Math.round(ease*target);
+    if(p<1) requestAnimationFrame(step);
+    else el.textContent = target;
+  }
+  requestAnimationFrame(step);
+}
+const statsObs = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if(entry.isIntersecting){
+      const nums = entry.target.querySelectorAll('[data-count]');
+      nums.forEach(el => countUp(el, +el.dataset.count, 1200));
+      statsObs.disconnect();
+    }
+  });
+}, {threshold:.5});
+const statsSection = document.getElementById('stats');
+if(statsSection) statsObs.observe(statsSection);
+
+/* ===================== REVEAL OBSERVER ===================== */
+const revealObs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+}, {threshold:.15});
+document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
+
+/* ===================== COPY BUTTONS ===================== */
+function setupCopy(btnId, text) {
+  const btn = document.getElementById(btnId);
+  if(!btn) return;
+  btn.addEventListener('click', () => {
+    navigator.clipboard.writeText(text).then(() => {
+      const svg = btn.querySelector('svg');
+      if(svg) svg.innerHTML = '<polyline points="20 6 9 17 4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>';
+      btn.style.color = 'var(--green)';
+      setTimeout(() => {
+        if(svg) svg.innerHTML = '<rect x="5" y="5" width="9" height="9" rx="1.5"/><path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5"/>';
+        btn.style.color = '';
+      }, 2000);
+    });
+  });
+}
+setupCopy('copy-hero','npx @kevinpatil/devguard');
+setupCopy('copy-cta','npx @kevinpatil/devguard');
+const yamlBtn = document.getElementById('copy-yaml');
+if(yamlBtn){
+  yamlBtn.addEventListener('click',()=>{
+    navigator.clipboard.writeText(`- name: Run devguard\n  run: npx @kevinpatil/devguard --strict`).then(()=>{
+      yamlBtn.style.color='var(--green)';
+      setTimeout(()=>{ yamlBtn.style.color=''; },2000);
+    });
+  });
+}
+
+/* ===================== TABS ===================== */
+const tabBtns = document.querySelectorAll('.tab-btn');
+const tabIndicator = document.getElementById('tab-indicator');
+const tabsContainer = document.getElementById('tabs-container');
+function moveIndicator(btn){
+  const containerRect = tabsContainer.getBoundingClientRect();
+  const btnRect = btn.getBoundingClientRect();
+  tabIndicator.style.left = (btnRect.left - containerRect.left) + 'px';
+  tabIndicator.style.width = btnRect.width + 'px';
+}
+// Init
+moveIndicator(document.querySelector('.tab-btn.active'));
+tabBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    tabBtns.forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected','false'); });
+    btn.classList.add('active');
+    btn.setAttribute('aria-selected','true');
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab-'+btn.dataset.tab).classList.add('active');
+    moveIndicator(btn);
+  });
+});
+window.addEventListener('resize', () => {
+  const active = document.querySelector('.tab-btn.active');
+  if(active) moveIndicator(active);
+});
+</script>
+</body>
+</html>
