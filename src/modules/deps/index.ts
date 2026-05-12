@@ -1,13 +1,22 @@
+import { execSync }                 from 'child_process';
 import { findUnusedPackages }      from './unused';
 import { findOutdatedPackages }     from './outdated';
 import { findVulnerablePackages }   from './vulns';
 import { getAlternative }           from './alternatives';
+import { findLicenseIssues }        from './licenses';
+import { findSupplyChainRisks }     from './supplyChain';
+import { findDuplicateDeps }        from './duplicates';
 import { printHeader, printError, printWarning, printSummary } from '../../reporter';
 import { printBuddy }               from '../../buddy';
 import { DepsIssue }                from '../../types';
 
 export interface DepsRunOptions {
   json:             boolean;
+  licenses?:        boolean;
+  fix?:             boolean;
+  dryRun?:          boolean;
+  supplyChain?:     boolean;
+  duplicates?:      boolean;
   suppressSummary?: boolean;
   silent?:          boolean;
 }
@@ -20,11 +29,14 @@ export interface DepsCounts {
 export async function runDeps(options: DepsRunOptions): Promise<DepsCounts> {
   const cwd = process.cwd();
 
-  // run all checks — unused is sync, outdated + vulns are async (parallel)
+  // run all checks — unused is sync, async checks run in parallel
   const unused = findUnusedPackages(cwd);
-  const [outdated, vulns] = await Promise.all([
+  const dupes  = options.duplicates ? findDuplicateDeps(cwd) : [] as DepsIssue[];
+  const [outdated, vulns, licenses, supplyChain] = await Promise.all([
     findOutdatedPackages(cwd),
     findVulnerablePackages(cwd),
+    options.licenses    ? findLicenseIssues(cwd)       : Promise.resolve([] as DepsIssue[]),
+    options.supplyChain ? findSupplyChainRisks(cwd)    : Promise.resolve([] as DepsIssue[]),
   ]);
 
   // alternatives — cross-reference unused + all declared packages
@@ -45,7 +57,7 @@ export async function runDeps(options: DepsRunOptions): Promise<DepsCounts> {
     }
   }
 
-  const allIssues = [...unused, ...outdated, ...vulns, ...alternatives];
+  const allIssues = [...unused, ...outdated, ...vulns, ...alternatives, ...licenses, ...supplyChain, ...dupes];
 
   const errors   = allIssues.filter((i) => i.severity === 'error');
   const warnings = allIssues.filter((i) => i.severity === 'warning');
@@ -78,6 +90,24 @@ export async function runDeps(options: DepsRunOptions): Promise<DepsCounts> {
       for (const i of alternatives) printWarning(i.name, i.message);
     }
 
+    if (licenses.length > 0) {
+      console.log('\n  Licenses');
+      for (const i of licenses) {
+        if (i.severity === 'error') printError(i.name, i.message);
+        else printWarning(i.name, i.message);
+      }
+    }
+
+    if (supplyChain.length > 0) {
+      console.log('\n  Supply Chain');
+      for (const i of supplyChain) printWarning(i.name, i.message);
+    }
+
+    if (dupes.length > 0) {
+      console.log('\n  Duplicate Versions');
+      for (const i of dupes) printWarning(i.name, i.message);
+    }
+
     if (allIssues.length === 0) {
       console.log('\n  ✔ All dependency checks passed');
     }
@@ -89,6 +119,22 @@ export async function runDeps(options: DepsRunOptions): Promise<DepsCounts> {
         hasErrors ? 'error' : 'clear',
         hasErrors ? `${errors.length} dep error(s) — fix before deploy.` : ''
       );
+    }
+  }
+
+  // --dry-run / --fix for unused packages
+  if ((options.dryRun || options.fix) && unused.length > 0) {
+    const names = unused.map((i) => i.name);
+    if (options.dryRun) {
+      console.log(`\n  Dry run — would remove: ${names.join(', ')}`);
+    } else {
+      console.log(`\n  Removing unused packages: ${names.join(', ')}`);
+      try {
+        execSync(`npm uninstall ${names.join(' ')}`, { cwd, stdio: 'inherit' });
+        console.log('  ✔ Done');
+      } catch {
+        console.error('  ✗ npm uninstall failed — run manually');
+      }
     }
   }
 

@@ -1,0 +1,10 @@
+{
+  "name": "with-licenses",
+  "version": "1.0.0",
+  "dependencies": {
+    "lodash": "^4.17.21",
+    "gpl-pkg": "^1.0.0",
+    "agpl-pkg": "^1.0.0",
+    "unlicensed-pkg": "^1.0.0"
+  }
+}

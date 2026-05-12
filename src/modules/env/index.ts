@@ -10,6 +10,7 @@ import { typeMismatch }    from './rules/type-mismatch';
 import { malformedUrl }    from './rules/malformed-url';
 import { booleanMismatch } from './rules/boolean-mismatch';
 import { checkConsistency, ConsistencyIssue } from './consistency';
+import { scanGitHistory } from './gitScan';
 import { printHeader, printError, printWarning, printPassed, printSummary } from '../../reporter';
 import { printBuddy } from '../../buddy';
 import { ValidationResult } from '../../types';
@@ -54,6 +55,8 @@ export interface EnvRunOptions {
   strict:           boolean;
   json:             boolean;
   init:             boolean;
+  scanGit?:         boolean;
+  depth?:           number;
   suppressSummary?: boolean;
   silent?:          boolean;
 }
@@ -186,6 +189,15 @@ export function runEnv(options: EnvRunOptions): EnvCounts {
     console.log('\n  ⚡ Cross-environment');
     for (const issue of consistency) {
       console.log(`    ${issue.key} — present in [${issue.presentIn.join(', ')}] but missing in [${issue.missingIn.join(', ')}]`);
+    }
+  }
+
+  if (options.scanGit) {
+    const gitIssues = scanGitHistory(cwd, options.depth ?? 50);
+    if (!options.silent && gitIssues.length > 0) {
+      console.log('\n  Git History');
+      for (const i of gitIssues) printError(i.file, i.message);
+      totalErrors += gitIssues.length;
     }
   }
 
