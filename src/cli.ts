@@ -22,7 +22,7 @@ export const program = new Command();
 program
   .name('devguard')
   .description('Guard your project — env, deps, and React code quality in one command')
-  .version('2.0.0')
+  .version('3.3.0')
   .option('--json',   'output results as JSON')
   .option('--strict', 'exit with code 1 if any errors are found')
   .option('--score',  'print health score only, no detail output')
@@ -183,7 +183,7 @@ program
 
 program
   .command('react')
-  .description('Run all React checks — imports, rerenders, hooks, bundle, a11y, server')
+  .description('Run all React checks — imports, rerenders, hooks, bundle, a11y, server, secrets')
   .option('--entry <file>', 'entry point file (e.g. src/main.tsx)')
   .option('--json', 'output results as JSON')
   .action(async (opts) => {
@@ -193,6 +193,7 @@ program
     await runReactBundle({ json: !!opts.json });
     runReactA11y({ json: !!opts.json });
     runReactServer({ json: !!opts.json });
+    runReactSecrets({ json: !!opts.json });
   });
 
 program
