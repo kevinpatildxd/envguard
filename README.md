@@ -4,6 +4,7 @@
 [![CI](https://github.com/kevinpatildxd/devguard/actions/workflows/test.yml/badge.svg)](https://github.com/kevinpatildxd/devguard/actions/workflows/test.yml)
 [![npm version](https://img.shields.io/npm/v/%40kevinpatil%2Fdevguard.svg)](https://www.npmjs.com/package/@kevinpatil/devguard)
 [![npm downloads](https://img.shields.io/npm/dm/%40kevinpatil%2Fdevguard.svg)](https://www.npmjs.com/package/@kevinpatild/devguard)
+[![devguard-action](https://img.shields.io/badge/GitHub%20Actions-devguard--action-blue?logo=github-actions)](https://github.com/kevinpatildxd/devguard-action)
 
 One command to guard your project before it ships.
 
@@ -16,8 +17,8 @@ Validates env files, audits dependencies, and checks React code quality — all 
 | Module | Command | What it catches |
 |---|---|---|
 | **env** | `devguard env` | Missing keys, insecure defaults, type mismatches, weak secrets, cross-env inconsistencies |
-| **deps** | `devguard deps` | Unused packages, outdated versions, vulnerabilities (OSV.dev), bloated alternatives |
-| **react** | `devguard react` | Dead imports, re-render risks, hook violations, bundle size, accessibility, RSC boundaries |
+| **deps** | `devguard deps` | Unused packages, outdated versions, vulnerabilities, licenses, supply chain risks, duplicates |
+| **react** | `devguard react` | Dead imports, re-render risks, hook violations, bundle size, accessibility, RSC boundaries, hardcoded secrets |
 
 Run all checks at once:
 
@@ -64,6 +65,9 @@ npx @kevinpatil/devguard deps --json
 # Exit with code 1 if any errors found (for CI)
 npx @kevinpatil/devguard --strict
 npx @kevinpatil/devguard env --strict
+
+# Write a SARIF report for GitHub Code Scanning
+npx @kevinpatil/devguard --sarif
 ```
 
 ---
@@ -108,13 +112,20 @@ devguard — found 2 env file(s)
 | `malformed-url` | WARNING | URL key has a missing or unrecognized protocol |
 | `boolean-mismatch` | WARNING | Boolean key (`FEATURE_*`, `ENABLE_*`…) has a non-boolean value |
 
-### Getting started (no `.env.example` yet)
+### env flags
 
 ```bash
+# Generate .env.example from your existing .env
 npx @kevinpatil/devguard env --init
-```
 
-Generates `.env.example` from your existing `.env` with all values blanked. Commit it so teammates know what keys are required.
+# Scan git history for accidentally committed .env files
+npx @kevinpatil/devguard env --scan-git
+npx @kevinpatil/devguard env --scan-git --depth 100
+
+# Generate a Zod schema from .env.example
+npx @kevinpatil/devguard env --schema
+# → writes env.schema.ts with z.object({ ... })
+```
 
 ---
 
@@ -135,6 +146,27 @@ npx @kevinpatil/devguard deps
     ✗ express@4.18.0 — CVE-2024-29041  High
   ALTERNATIVES (1)
     ⚠ moment — 67KB, consider date-fns (13KB) or dayjs (2KB)
+```
+
+### deps flags
+
+```bash
+# Audit package licenses
+npx @kevinpatil/devguard deps --licenses
+# MIT/ISC/Apache → OK  |  GPL → WARN  |  AGPL → ERROR  |  UNLICENSED → WARN
+
+# Check supply chain risks (install scripts, abandoned, single-maintainer)
+npx @kevinpatil/devguard deps --supply-chain
+
+# Detect packages installed at multiple versions
+npx @kevinpatil/devguard deps --duplicates
+
+# Auto-remove unused packages
+npx @kevinpatil/devguard deps --fix
+npx @kevinpatil/devguard deps --dry-run   # preview without removing
+
+# Run all dep checks at once
+npx @kevinpatil/devguard deps --licenses --supply-chain --duplicates
 ```
 
 ---
@@ -172,18 +204,92 @@ npx @kevinpatil/devguard react:hooks       # hooks rules violations
 npx @kevinpatil/devguard react:bundle      # bundle size analysis
 npx @kevinpatil/devguard react:a11y        # accessibility checks
 npx @kevinpatil/devguard react:server      # RSC boundary violations
+npx @kevinpatil/devguard react:secrets     # hardcoded API keys and credentials
 ```
+
+---
+
+## SARIF output
+
+Generate a [SARIF](https://sarifweb.azurewebsites.net/) report for GitHub Code Scanning annotations:
+
+```bash
+npx @kevinpatil/devguard --sarif
+# → writes devguard.sarif
+```
+
+Upload it in your workflow:
+
+```yaml
+- uses: kevinpatildxd/devguard-action@v1
+- uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: devguard.sarif
+```
+
+---
+
+## Config file
+
+Create `.devguard.json` in your project root to set defaults (CLI flags always override):
+
+```json
+{
+  "strict": true,
+  "env": {
+    "example": ".env.example"
+  },
+  "deps": {
+    "licenses": true,
+    "supplyChain": false
+  },
+  "react": {
+    "entry": "src/main.tsx"
+  }
+}
+```
+
+---
+
+## Pre-commit hooks
+
+```bash
+npx @kevinpatil/devguard init --hooks
+```
+
+Auto-detects Husky. If found, writes `.husky/pre-commit`. Otherwise writes `.git/hooks/pre-commit`. Runs `devguard --strict` before every commit.
 
 ---
 
 ## CI Integration
 
-### GitHub Actions
+### GitHub Actions (recommended)
+
+Use the [devguard-action](https://github.com/kevinpatildxd/devguard-action) for one-line CI integration:
 
 ```yaml
-- name: Run devguard
-  run: npx @kevinpatil/devguard --strict
+name: devguard audit
+on: [push, pull_request]
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: kevinpatildxd/devguard-action@v1
 ```
+
+CI fails automatically if devguard finds any errors. Customize with inputs:
+
+```yaml
+- uses: kevinpatildxd/devguard-action@v1
+  with:
+    command: env          # run only env checks
+    strict: true          # fail on errors (default)
+    version: '2.1.0'      # pin a specific devguard version
+```
+
+See [devguard-action](https://github.com/kevinpatildxd/devguard-action) for the full input/output reference.
 
 ### Any CI
 
