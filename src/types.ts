@@ -15,7 +15,7 @@ export type ParsedEnv = Map<string, string>;
 // ── Deps module ─────────────────────────────────────────────────────────────
 
 export interface DepsIssue {
-  type: 'unused' | 'outdated' | 'vulnerable' | 'alternative';
+  type: 'unused' | 'outdated' | 'vulnerable' | 'alternative' | 'license' | 'supply-chain' | 'duplicate';
   severity: Severity;
   name: string;
   message: string;
