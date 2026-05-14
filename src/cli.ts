@@ -17,12 +17,21 @@ import { printSummary, printHealthScore }    from './reporter';
 import { buildSarif, writeSarif }            from './sarif';
 import { loadConfig }                        from './config';
 
+function readPkgVersion(): string {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf-8')) as { version: string };
+    return pkg.version;
+  } catch {
+    return '0.0.0';
+  }
+}
+
 export const program = new Command();
 
 program
   .name('devguard')
   .description('Guard your project — env, deps, and React code quality in one command')
-  .version('3.3.0')
+  .version(readPkgVersion())
   .option('--json',   'output results as JSON')
   .option('--strict', 'exit with code 1 if any errors are found')
   .option('--score',  'print health score only, no detail output')
@@ -144,8 +153,9 @@ program
   .command('react:rerenders')
   .description('Detect inline objects/functions in JSX props and missing React.memo')
   .option('--json', 'output results as JSON')
+  .option('--no-memo', 'skip the missing React.memo check')
   .action((opts) => {
-    runReactRerenders({ json: !!opts.json });
+    runReactRerenders({ json: !!opts.json, skipMemo: opts.memo === false });
   });
 
 program
@@ -186,9 +196,10 @@ program
   .description('Run all React checks — imports, rerenders, hooks, bundle, a11y, server, secrets')
   .option('--entry <file>', 'entry point file (e.g. src/main.tsx)')
   .option('--json', 'output results as JSON')
+  .option('--no-memo', 'skip the missing React.memo check')
   .action(async (opts) => {
     runReactImports({ entry: opts.entry, json: !!opts.json });
-    runReactRerenders({ json: !!opts.json });
+    runReactRerenders({ json: !!opts.json, skipMemo: opts.memo === false });
     runReactHooks({ json: !!opts.json });
     await runReactBundle({ json: !!opts.json });
     runReactA11y({ json: !!opts.json });
