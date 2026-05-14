@@ -3,6 +3,20 @@ import path from 'path';
 import { httpGet }   from '../../utils/httpClient';
 import { DepsIssue } from '../../types';
 
+async function batchSettled<T>(
+  items: T[],
+  fn: (item: T) => Promise<unknown>,
+  concurrency = 10,
+): Promise<PromiseSettledResult<unknown>[]> {
+  const results: PromiseSettledResult<unknown>[] = [];
+  for (let i = 0; i < items.length; i += concurrency) {
+    const chunk = items.slice(i, i + concurrency);
+    const chunkResults = await Promise.allSettled(chunk.map(fn));
+    results.push(...chunkResults);
+  }
+  return results;
+}
+
 interface NpmMeta {
   time?:        Record<string, string>;
   maintainers?: unknown[];
@@ -21,8 +35,9 @@ export async function findSupplyChainRisks(cwd: string): Promise<DepsIssue[]> {
   const names = Object.keys(deps);
   if (names.length === 0) return [];
 
-  const settled = await Promise.allSettled(
-    names.map(async (name) => {
+  const settled = await batchSettled(
+    names,
+    async (name) => {
       const [latest, meta] = await Promise.all([
         httpGet<{ scripts?: Record<string, string> }>(
           `https://registry.npmjs.org/${encodeURIComponent(name)}/latest`,
@@ -30,8 +45,8 @@ export async function findSupplyChainRisks(cwd: string): Promise<DepsIssue[]> {
         httpGet<NpmMeta>(`https://registry.npmjs.org/${encodeURIComponent(name)}`),
       ]);
       return { name, latest, meta };
-    }),
-  );
+    },
+  ) as PromiseSettledResult<{ name: string; latest: { scripts?: Record<string, string> }; meta: NpmMeta }>[];
 
   const issues: DepsIssue[] = [];
 
