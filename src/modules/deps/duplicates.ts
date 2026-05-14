@@ -13,24 +13,36 @@ interface PackageLock {
 }
 
 export function findDuplicateDeps(cwd: string): DepsIssue[] {
-  const lockPath = path.join(cwd, 'package-lock.json');
-  if (!fs.existsSync(lockPath)) return [];
-
-  let lock: PackageLock;
-  try {
-    lock = JSON.parse(fs.readFileSync(lockPath, 'utf-8'));
-  } catch {
-    return [];
+  // Try package-lock.json first (npm)
+  const npmLock = path.join(cwd, 'package-lock.json');
+  if (fs.existsSync(npmLock)) {
+    try {
+      const lock: PackageLock = JSON.parse(fs.readFileSync(npmLock, 'utf-8'));
+      if (lock.packages) return fromPackagesMap(lock.packages);
+      if (lock.dependencies) return fromV1Dependencies(lock.dependencies);
+    } catch {
+      return [];
+    }
   }
 
-  // lockfileVersion 2/3 uses the flat `packages` map
-  if (lock.packages) {
-    return fromPackagesMap(lock.packages);
+  // Try pnpm-lock.yaml
+  const pnpmLock = path.join(cwd, 'pnpm-lock.yaml');
+  if (fs.existsSync(pnpmLock)) {
+    try {
+      return fromPnpmLock(fs.readFileSync(pnpmLock, 'utf-8'));
+    } catch {
+      return [];
+    }
   }
 
-  // lockfileVersion 1 uses nested `dependencies`
-  if (lock.dependencies) {
-    return fromV1Dependencies(lock.dependencies);
+  // Try yarn.lock
+  const yarnLock = path.join(cwd, 'yarn.lock');
+  if (fs.existsSync(yarnLock)) {
+    try {
+      return fromYarnLock(fs.readFileSync(yarnLock, 'utf-8'));
+    } catch {
+      return [];
+    }
   }
 
   return [];
@@ -40,8 +52,7 @@ function fromPackagesMap(packages: LockPackages): DepsIssue[] {
   const versionMap = new Map<string, Set<string>>();
 
   for (const [key, entry] of Object.entries(packages)) {
-    if (!key || key === '') continue; // skip root
-    // key format: "node_modules/foo" or "node_modules/foo/node_modules/bar"
+    if (!key || key === '') continue;
     const match = key.match(/node_modules\/([^/]+)$/);
     if (!match) continue;
     const name = match[1];
@@ -61,6 +72,40 @@ function fromV1Dependencies(
     versionMap.get(name)!.add(entry.version);
     if (entry.dependencies) {
       fromV1Dependencies(entry.dependencies as any, versionMap);
+    }
+  }
+  return buildIssues(versionMap);
+}
+
+function fromPnpmLock(content: string): DepsIssue[] {
+  const versionMap = new Map<string, Set<string>>();
+  for (const line of content.split('\n')) {
+    // matches: "  /react@18.2.0:" or "  react@18.2.0:" (snapshots/packages sections)
+    const m = line.match(/^\s+\/?([^@/][^@]*)@([\d][^:\s]+):/);
+    if (!m) continue;
+    const [, name, version] = m;
+    if (!versionMap.has(name)) versionMap.set(name, new Set());
+    versionMap.get(name)!.add(version);
+  }
+  return buildIssues(versionMap);
+}
+
+function fromYarnLock(content: string): DepsIssue[] {
+  const versionMap = new Map<string, Set<string>>();
+  let currentPkg: string | null = null;
+
+  for (const line of content.split('\n')) {
+    // Package descriptor line: "react@^18.0.0, react@^18.1.0:" or '"react@^18.0.0":'
+    const descMatch = line.match(/^"?([^@"]+)@[^"]*"?[,:]?\s*$/);
+    if (descMatch && !line.startsWith(' ') && !line.startsWith('#')) {
+      currentPkg = descMatch[1].trim();
+      continue;
+    }
+    // Version line: '  version "18.2.0"'
+    const versionMatch = line.match(/^\s+version\s+"([^"]+)"/);
+    if (versionMatch && currentPkg) {
+      if (!versionMap.has(currentPkg)) versionMap.set(currentPkg, new Set());
+      versionMap.get(currentPkg)!.add(versionMatch[1]);
     }
   }
   return buildIssues(versionMap);

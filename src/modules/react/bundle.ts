@@ -2,7 +2,6 @@ import fs   from 'fs';
 import path from 'path';
 import { tryParseSource }    from '../../utils/astHelpers';
 import { walkFiles }         from '../../utils/fileWalker';
-import { httpGet }           from '../../utils/httpClient';
 import { printHeader, printWarning } from '../../reporter';
 import { printBuddy }        from '../../buddy';
 import { ReactIssue }        from '../../types';
@@ -96,10 +95,19 @@ function extractImports(filePath: string): ImportRecord[] {
 
 async function fetchBundlephobia(pkg: string): Promise<number | null> {
   try {
-    const data = await httpGet<BundlephobiaResponse>(
-      `https://bundlephobia.com/api/size?package=${encodeURIComponent(pkg)}`
-    );
-    return typeof data.gzip === 'number' ? data.gzip / 1024 : null; // bytes → kB
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+    try {
+      const res = await fetch(
+        `https://bundlephobia.com/api/size?package=${encodeURIComponent(pkg)}`,
+        { signal: controller.signal },
+      );
+      if (!res.ok) return null;
+      const data = await res.json() as BundlephobiaResponse;
+      return typeof data.gzip === 'number' ? data.gzip / 1024 : null;
+    } finally {
+      clearTimeout(timer);
+    }
   } catch {
     return null;
   }

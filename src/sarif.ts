@@ -1,5 +1,15 @@
-import fs from 'fs';
+import fs   from 'fs';
+import path from 'path';
 import { DepsIssue, ValidationResult, ReactIssue } from './types';
+
+function getPkgVersion(): string {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf-8')) as { version: string };
+    return pkg.version;
+  } catch {
+    return '0.0.0';
+  }
+}
 
 interface SarifLocation {
   physicalLocation: {
@@ -51,7 +61,7 @@ function reactRule(type: string): SarifRule {
   return { id: `react/${type}`, shortDescription: { text: type } };
 }
 
-export function buildSarif(input: SarifInput, toolVersion = '2.5.0'): object {
+export function buildSarif(input: SarifInput, toolVersion = getPkgVersion()): object {
   const results:  SarifResult[] = [];
   const ruleMap   = new Map<string, SarifRule>();
 

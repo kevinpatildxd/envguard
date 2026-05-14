@@ -3,6 +3,20 @@ import path from 'path';
 import { httpGet } from '../../utils/httpClient';
 import { DepsIssue } from '../../types';
 
+async function batchSettled<T, R>(
+  items: T[],
+  fn: (item: T) => Promise<R>,
+  concurrency = 10,
+): Promise<PromiseSettledResult<R>[]> {
+  const results: PromiseSettledResult<R>[] = [];
+  for (let i = 0; i < items.length; i += concurrency) {
+    const chunk = items.slice(i, i + concurrency);
+    const chunkResults = await Promise.allSettled(chunk.map(fn));
+    results.push(...chunkResults);
+  }
+  return results;
+}
+
 function stripRange(version: string): string {
   return version.replace(/^[\^~>=<]+/, '').trim();
 }
@@ -33,13 +47,14 @@ export async function findOutdatedPackages(cwd: string): Promise<DepsIssue[]> {
 
   const entries = Object.entries(deps).filter(([, v]) => !v.startsWith('file:') && !v.startsWith('git'));
 
-  const results = await Promise.allSettled(
-    entries.map(async ([name, range]) => {
+  const results = await batchSettled(
+    entries,
+    async ([name, range]) => {
       const current = stripRange(range);
       const data    = await httpGet<NpmLatest>(`https://registry.npmjs.org/${name}/latest`);
       return { name, current, latest: data.version };
-    })
-  );
+    },
+  ) as PromiseSettledResult<{ name: string; current: string; latest: string }>[];
 
   const issues: DepsIssue[] = [];
   for (const result of results) {

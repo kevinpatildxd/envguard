@@ -1,7 +1,7 @@
 {
   "name": "@kevinpatil/devguard",
   "version": "3.3.0",
-  "description": "CLI tool that validates .env files against .env.example before your app ships",
+  "description": "CLI tool that audits env files, dependencies, and React code quality before your app ships",
   "main": "dist/index.js",
   "bin": {
     "devguard": "dist/index.js"
@@ -23,7 +23,14 @@
     "environment-variables",
     "validation",
     "devtools",
-    "typescript"
+    "typescript",
+    "react",
+    "dependencies",
+    "security",
+    "audit",
+    "sarif",
+    "supply-chain",
+    "linting"
   ],
   "author": "Kevin Patil",
   "license": "MIT",
@@ -50,5 +57,13 @@
     "tsup": "^8.1.0",
     "typescript": "^5.4.5",
     "vitest": "^1.6.0"
+  },
+  "peerDependencies": {
+    "zod": ">=3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "zod": {
+      "optional": true
+    }
   }
 }
