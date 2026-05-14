@@ -236,8 +236,9 @@ function hookCallName(callee: Record<string, unknown>): string | null {
 // ── Main runner ───────────────────────────────────────────────────────────
 
 export interface ReactRerendersOptions {
-  json: boolean;
-  cwd?: string;
+  json:      boolean;
+  cwd?:      string;
+  skipMemo?: boolean;
 }
 
 export function runReactRerenders(options: ReactRerendersOptions): void {
@@ -255,7 +256,7 @@ export function runReactRerenders(options: ReactRerendersOptions): void {
     issues.push(
       ...checkInlineObjectProps(ast, rel),
       ...checkInlineFunctionProps(ast, rel),
-      ...checkMissingMemo(ast, rel),
+      ...(options.skipMemo ? [] : checkMissingMemo(ast, rel)),
       ...checkUnstableDepArrays(ast, rel),
     );
   }

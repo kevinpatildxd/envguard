@@ -1,42 +1,59 @@
-# EnvGuard — Project Roadmap
+# devguard — Roadmap
 
-## v1.0.0 (MVP — ~3 weeks)
+## ✅ Shipped
 
-### Phase 1: Setup & Parser (Days 1–4)
-- [ ] Init repo with TypeScript + tsup
-- [ ] Add commander.js + chalk
-- [ ] Write `.env` parser (`src/parser.ts`)
-- [ ] Write `.env.example` parser
-- [ ] Basic CLI entry point (`src/index.ts`)
+### v1.0.0 — ENV Validator (MVP)
+- [x] TypeScript + tsup + commander.js + chalk setup
+- [x] `.env` and `.env.example` parser
+- [x] Missing keys, empty value, insecure defaults, weak secrets rules
+- [x] Type mismatch, malformed URL, boolean mismatch, undeclared key rules
+- [x] Color-coded reporter (`src/reporter.ts`)
+- [x] `--strict`, `--json`, `--file` CLI flags
+- [x] Vitest unit tests + fixture `.env` files
+- [x] GitHub Actions CI + npm publish on tag
+- [x] Published to npm as `@kevinpatil/devguard`
 
-### Phase 2: Core Validation Rules (Days 5–9)
-- [ ] Missing keys rule
-- [ ] Undeclared/extra keys rule
-- [ ] Empty value rule
-- [ ] Insecure defaults rule (changeme, secret, todo, 1234)
-- [ ] Weak secret length rule
-- [ ] Type mismatch rule (PORT, TIMEOUT)
-- [ ] Malformed URL rule
-- [ ] Boolean mismatch rule (yes/no vs true/false)
+### v2.0.0 — DEPS Auditor
+- [x] Unused packages (AST-based import analysis)
+- [x] Outdated versions (npm registry)
+- [x] Vulnerabilities (OSV.dev batch API)
+- [x] License classification (permissive/copyleft/AGPL)
+- [x] Supply chain risks (install scripts, abandonment, single-maintainer)
+- [x] Duplicate versions (lockfile analysis)
+- [x] Lighter-weight alternatives (24 packages)
+- [x] 24-hour local HTTP cache (`~/.devguard/cache.json`)
+- [x] `--licenses`, `--supply-chain`, `--duplicates`, `--fix`, `--dry-run` flags
 
-### Phase 3: CLI Output & Flags (Days 10–12)
-- [ ] Color-coded reporter (`src/reporter.ts`)
-- [ ] `--strict` flag (exit code 1 for errors)
-- [ ] `--json` flag (machine-readable output for CI)
-- [ ] `--env` flag (target a named env file)
+### v3.0.0 — REACT Auditor
+- [x] `react:imports` — dead imports and dead files (entry-point graph traversal)
+- [x] `react:rerenders` — inline object/function props, missing React.memo, unstable dep arrays
+- [x] `react:hooks` — Rules of Hooks violations (conditional, loop, nested, invalid caller)
+- [x] `react:bundle` — heavy package warnings (static list + Bundlephobia fallback)
+- [x] `react:a11y` — JSX accessibility checks (img alt, button, input, anchor)
+- [x] `react:server` — React Server Component boundary violations
+- [x] `react:secrets` — hardcoded credentials in source files
 
-### Phase 4: Ship (Days 13–15)
-- [ ] vitest unit tests for every rule
-- [ ] Fixture `.env` files for testing
-- [ ] README with usage, CI integration examples
-- [ ] GitHub Actions: test on push, publish on tag
-- [ ] Publish v1.0.0 to npm
+### v3.1.0 — SARIF + Health Score
+- [x] `--sarif` flag — SARIF 2.1.0 report for GitHub Code Scanning
+- [x] `--score` flag — health score (0–100) for CI
+- [x] ASCII mascot (`src/buddy.ts`)
+
+### v3.2.0 — Git History Scanning
+- [x] `--scan-git` — scans git history for committed `.env` files
+- [x] `--depth <n>` — configurable commit depth (default: 50)
+
+### v3.3.0 — Zod Schema Generation + Init Hooks
+- [x] `--schema` flag — generates `env.schema.ts` with Zod types from `.env.example`
+- [x] `init --hooks` — installs pre-commit hook that runs `devguard --strict`
+- [x] `.devguard.json` config file support
 
 ---
 
-## v1.1.0 (Post-launch ideas)
-- [ ] `--fix` flag — interactive prompts to fill missing keys
-- [ ] `envguard.config.ts` — zod-style schema support
+## 🔜 Planned
+
+- [ ] `--no-memo` flag for `react:rerenders` (skip noisy missing-memo check) — done in v3.3.x
+- [ ] pnpm and yarn lockfile support in `deps --duplicates`
+- [ ] Concurrency limit on npm registry calls (prevent rate limiting on large monorepos)
 - [ ] VS Code extension
-- [ ] GitHub Action marketplace listing
-- [ ] Docker `.env` / multi-stage env support
+- [ ] `--watch` mode — re-run on file change
+- [ ] Docker / multi-stage `.env` support
