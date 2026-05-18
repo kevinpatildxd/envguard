@@ -3,7 +3,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/kevinpatildxd/devguard/actions/workflows/ci.yml/badge.svg)](https://github.com/kevinpatildxd/devguard/actions/workflows/ci.yml)
 [![npm version](https://img.shields.io/npm/v/%40kevinpatil%2Fdevguard.svg)](https://www.npmjs.com/package/@kevinpatil/devguard)
-[![npm downloads](https://img.shields.io/npm/dm/%40kevinpatil%2Fdevguard.svg)](https://www.npmjs.com/package/@kevinpatild/devguard)
+[![npm downloads](https://img.shields.io/npm/dm/%40kevinpatil%2Fdevguard.svg)](https://www.npmjs.com/package/@kevinpatil/devguard)
+[![npm total downloads](https://img.shields.io/npm/dt/%40kevinpatil%2Fdevguard.svg?label=total%20downloads)](https://www.npmjs.com/package/@kevinpatil/devguard)
 [![devguard-action](https://img.shields.io/badge/GitHub%20Actions-devguard--action-blue?logo=github-actions)](https://github.com/kevinpatildxd/devguard-action)
 
 One command to guard your project before it ships.
